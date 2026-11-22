@@ -1,0 +1,7 @@
+[
+  { "id": 1, "kode": "elektronik", "nama": "Elektronik", "keterangan": "Laptop, telepon pintar, tablet, dan perangkat elektronik lain." },
+  { "id": 2, "kode": "media_penyimpanan", "nama": "Media Penyimpanan", "keterangan": "Hard disk, flash disk, kartu memori, SSD." },
+  { "id": 3, "kode": "dokumen_digital", "nama": "Dokumen Digital", "keterangan": "Cetakan atau salinan dokumen elektronik." },
+  { "id": 4, "kode": "perangkat_jaringan", "nama": "Perangkat Jaringan", "keterangan": "Router, modem, access point, switch." },
+  { "id": 5, "kode": "lainnya", "nama": "Lainnya", "keterangan": "Kartu ATM, kartu SIM, dan barang lain." }
+]

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIBER EVIDENCE — Komponen UI</title>
+
+<!--
+  Katalog komponen UI SIBER EVIDENCE.
+  Semua kelas Tailwind di file ini disalin dari index.html (prototipe) supaya style terkunci.
+  Kalau membuat komponen React baru, salin kelasnya dari sini — jangan mengarang warna/ukuran baru.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  /* Konfigurasi tema — sama persis dengan index.html. Pindahkan ke tailwind.config.js di proyek React. */
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: {
+            50: '#f3f6fb', 100: '#e4eaf4', 200: '#c5d3e8', 300: '#9db3d4', 400: '#6f8cbb',
+            500: '#4c6ba3', 600: '#375388', 700: '#2c436e', 800: '#172B4D', 900: '#122138', 950: '#0c1626',
+          },
+        },
+        fontFamily: { sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+        boxShadow: { card: '0 1px 2px 0 rgb(23 43 77 / 0.05), 0 1px 3px 0 rgb(23 43 77 / 0.06)' },
+      },
+    },
+  };
+</script>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+
+<style>
+  html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid #f8fafc; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+  .anim-fade-up { animation: fadeUp .22s ease both; }
+  .anim-toast { animation: toastIn .22s ease both; }
+
+  /* Hanya untuk halaman katalog ini */
+  .sg-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+</style>
+</head>
+
+<body class="bg-slate-50 font-sans text-slate-700">
+
+<!-- ============================== KERANGKA KATALOG ============================== -->
+<div class="flex min-h-screen">
+
+  <!-- Daftar isi -->
+  <aside class="sticky top-0 hidden h-screen w-60 shrink-0 overflow-y-auto border-r border-slate-200 bg-white px-4 py-6 lg:block">
+    <div class="mb-6 flex items-center gap-2.5 px-2">
+      <span class="grid h-9 w-9 place-items-center rounded-xl bg-navy-800 text-white"><i data-lucide="shield" width="18" height="18"></i></span>
+      <div>
+        <p class="text-sm font-extrabold tracking-wide text-navy-800">SIBER EVIDENCE</p>
+        <p class="text-[10px] text-slate-500">Katalog Komponen UI</p>
+      </div>
+    </div>
+    <nav class="space-y-0.5 text-[13px] font-medium" id="toc"></nav>
+  </aside>
+
+  <main class="min-w-0 flex-1 px-4 py-8 sm:px-8">
+    <div class="mx-auto max-w-5xl space-y-14">
+
+      <header>
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-blue-600">Design System</p>
+        <h1 class="mt-1 text-2xl font-extrabold text-navy-800">Komponen UI SIBER EVIDENCE</h1>
+        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
+          Semua komponen di halaman ini diambil dari prototipe <span class="sg-code text-xs text-navy-800">index.html</span>.
+          Kelas Tailwind-nya sama persis, jadi bisa disalin langsung ke komponen React.
+          Ikon memakai <a class="font-semibold text-blue-600 hover:underline" href="https://lucide.dev/icons" target="_blank" rel="noopener">Lucide</a>.
+        </p>
+      </header>
+
+      <!-- ============================== 1. WARNA ============================== -->
+      <section data-sg="Warna" id="warna" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">1. Warna</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Navy untuk identitas (sidebar, judul, teks utama). Blue-600 untuk aksi utama. Slate untuk teks sekunder, border, dan latar.</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <h3 class="text-sm font-bold text-navy-800">Navy (warna custom)</h3>
+          <div class="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-11" id="navy-swatches"></div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+            <div class="h-12 rounded-lg bg-blue-600"></div>
+            <p class="mt-2 text-xs font-bold text-navy-800">Primary — blue-600</p>
+            <p class="text-[11px] text-slate-500">Tombol utama, link, item menu aktif. Hover blue-700.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+            <div class="h-12 rounded-lg bg-navy-800"></div>
+            <p class="mt-2 text-xs font-bold text-navy-800">Brand — navy-800</p>
+            <p class="text-[11px] text-slate-500">Sidebar, judul, avatar, teks penting.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+            <div class="h-12 rounded-lg border border-slate-200 bg-slate-50"></div>
+            <p class="mt-2 text-xs font-bold text-navy-800">Latar — slate-50</p>
+            <p class="text-[11px] text-slate-500">Latar halaman. Kartu memakai white.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+            <div class="h-12 rounded-lg bg-red-600"></div>
+            <p class="mt-2 text-xs font-bold text-navy-800">Danger — red-600</p>
+            <p class="text-[11px] text-slate-500">Hapus, error, akun nonaktif.</p>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <h3 class="text-sm font-bold text-navy-800">Makna warna status</h3>
+          <div class="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-emerald-500"></span><b class="text-navy-800">Emerald</b> — Tersedia, Aktif, Sudah Kembali, kondisi Baik, sukses</p>
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-amber-500"></span><b class="text-navy-800">Amber</b> — Dipinjam, Belum Kembali, Rusak Ringan, peringatan</p>
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-blue-500"></span><b class="text-navy-800">Blue</b> — Dalam Pemeriksaan, Penerimaan, info</p>
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-red-500"></span><b class="text-navy-800">Red</b> — Dihancurkan, Nonaktif, Rusak Berat, error</p>
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-sky-500"></span><b class="text-navy-800">Sky</b> — tahap Lidik</p>
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-indigo-500"></span><b class="text-navy-800">Indigo</b> — tahap Sidik, Perpindahan</p>
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-violet-500"></span><b class="text-navy-800">Violet</b> — Pemeriksaan (riwayat)</p>
+            <p class="flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-slate-400"></span><b class="text-navy-800">Slate</b> — Draf, Petugas, Pengalihan, netral</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 2. TIPOGRAFI ============================== -->
+      <section data-sg="Tipografi" id="tipografi" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">2. Tipografi</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Font Public Sans (400–800). Ukuran teks cenderung kecil dan padat.</p>
+        </div>
+        <div class="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-card">
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-lg font-bold leading-tight text-navy-800">Judul halaman (header)</p>
+            <code class="sg-code text-[11px] text-slate-400">text-lg font-bold text-navy-800</code>
+          </div>
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-base font-bold text-navy-800">Judul form / login</p>
+            <code class="sg-code text-[11px] text-slate-400">text-base font-bold text-navy-800</code>
+          </div>
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-sm font-bold text-navy-800">Judul kartu / modal</p>
+            <code class="sg-code text-[11px] text-slate-400">text-sm font-bold text-navy-800</code>
+          </div>
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-sm text-slate-700">Isi teks biasa, isi tabel</p>
+            <code class="sg-code text-[11px] text-slate-400">text-sm text-slate-700</code>
+          </div>
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-xs text-slate-500">Deskripsi kartu, teks pendukung</p>
+            <code class="sg-code text-[11px] text-slate-400">text-xs text-slate-500</code>
+          </div>
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-xs font-semibold text-slate-600">Label form</p>
+            <code class="sg-code text-[11px] text-slate-400">text-xs font-semibold text-slate-600</code>
+          </div>
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Label info / header tabel</p>
+            <code class="sg-code text-[11px] text-slate-400">text-[11px] font-semibold uppercase tracking-wide</code>
+          </div>
+          <div class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-4">
+            <p class="text-2xl font-bold leading-none tabular-nums text-navy-800">128</p>
+            <code class="sg-code text-[11px] text-slate-400">text-2xl font-bold tabular-nums text-navy-800 (angka statistik)</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 3. TOMBOL ============================== -->
+      <section data-sg="Tombol" id="tombol" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">3. Tombol</h2>
+          <p class="mt-0.5 text-sm text-slate-500">5 varian × 2 ukuran. Ikon 16px (md) atau 14px (sm), diletakkan sebelum teks.</p>
+        </div>
+        <div class="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Varian — ukuran md</p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 bg-blue-600 text-white shadow-sm hover:bg-blue-700 active:bg-blue-800"><i data-lucide="plus" width="16" height="16"></i>Primary</button>
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-navy-800"><i data-lucide="printer" width="16" height="16"></i>Secondary</button>
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 text-slate-600 hover:bg-slate-100 hover:text-navy-800"><i data-lucide="x" width="16" height="16"></i>Ghost</button>
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 bg-red-600 text-white shadow-sm hover:bg-red-700"><i data-lucide="trash-2" width="16" height="16"></i>Danger</button>
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 bg-navy-800 text-white shadow-sm hover:bg-navy-700"><i data-lucide="download" width="16" height="16"></i>Navy</button>
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ukuran sm</p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition bg-blue-600 text-white shadow-sm hover:bg-blue-700"><i data-lucide="plus" width="14" height="14"></i>Primary sm</button>
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-navy-800"><i data-lucide="printer" width="14" height="14"></i>Cetak</button>
+              <button class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-navy-800"><i data-lucide="file-spreadsheet" width="14" height="14"></i>Ekspor CSV</button>
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Disabled &amp; lebar penuh</p>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <button disabled class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 bg-red-600 text-white shadow-sm">Hapus Perkara (disabled)</button>
+              <button class="inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition bg-blue-600 text-white shadow-sm hover:bg-blue-700"><i data-lucide="shield" width="16" height="16"></i>Masuk (w-full)</button>
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Icon button (aksi di tabel)</p>
+            <div class="flex items-center gap-1.5">
+              <button title="Lihat detail" class="grid h-8 w-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-navy-800"><i data-lucide="eye" width="15" height="15"></i></button>
+              <button title="Edit" class="grid h-8 w-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-navy-800"><i data-lucide="pencil" width="15" height="15"></i></button>
+              <button title="Hapus" class="grid h-8 w-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"><i data-lucide="trash-2" width="15" height="15"></i></button>
+              <button disabled title="Disabled" class="grid h-8 w-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-500 transition disabled:cursor-not-allowed disabled:opacity-40"><i data-lucide="chevron-left" width="15" height="15"></i></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 4. FORM ============================== -->
+      <section data-sg="Form" id="form" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">4. Form</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Label di atas input, tanda <span class="text-red-500">*</span> untuk wajib, hint abu-abu, pesan error merah di bawah input.</p>
+        </div>
+        <div class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card sm:grid-cols-2">
+          <label class="block">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Nama Barang Bukti<span class="text-red-500">*</span></span>
+            <input class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="cth. Laptop Merk A Warna Hitam" />
+            <span class="mt-1 block text-[11px] leading-relaxed text-slate-400">Tulis nama yang mudah dikenali.</span>
+          </label>
+          <label class="block">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Nomor LP<span class="text-red-500">*</span></span>
+            <input class="w-full rounded-lg border border-red-400 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/15" value="LP/87/III/2025/Ditreskrimsus" />
+            <span class="mt-1 block text-[11px] font-medium text-red-600">Nomor LP sudah terdaftar.</span>
+          </label>
+          <label class="block">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Kode Barang Bukti</span>
+            <input disabled class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400" value="BB-2026-0014" />
+            <span class="mt-1 block text-[11px] leading-relaxed text-slate-400">Dibuat otomatis oleh sistem.</span>
+          </label>
+          <label class="block">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Kategori<span class="text-red-500">*</span></span>
+            <div class="relative">
+              <select class="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15">
+                <option value="">Pilih kategori</option>
+                <option>Elektronik</option><option>Media Penyimpanan</option><option>Dokumen Digital</option><option>Perangkat Jaringan</option><option>Lainnya</option>
+              </select>
+              <i data-lucide="chevron-down" width="15" height="15" class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            </div>
+          </label>
+          <label class="block">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Tanggal Penerimaan<span class="text-red-500">*</span></span>
+            <input type="date" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" value="2026-11-22" />
+          </label>
+          <label class="block">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Pencarian</span>
+            <div class="relative">
+              <i data-lucide="search" width="15" height="15" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="Cari kode, nama, atau nomor seri…" />
+            </div>
+          </label>
+          <label class="block sm:col-span-2">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Deskripsi</span>
+            <textarea rows="3" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="Ciri fisik, nomor segel, kelengkapan…"></textarea>
+          </label>
+          <label class="block">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Kata Sandi<span class="text-red-500">*</span></span>
+            <div class="relative">
+              <i data-lucide="lock" width="15" height="15" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="password" class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-10 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="••••••••" />
+              <button type="button" class="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Tampilkan kata sandi"><i data-lucide="eye" width="15" height="15"></i></button>
+            </div>
+          </label>
+          <div class="flex items-end">
+            <label class="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+              <input type="checkbox" checked class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+              Ingat saya di perangkat ini
+            </label>
+          </div>
+          <div class="sm:col-span-2">
+            <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Lampiran</span>
+            <label class="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-blue-400 hover:bg-blue-50/40">
+              <i data-lucide="upload-cloud" width="22" height="22" class="text-slate-400"></i>
+              <span class="mt-2 text-xs font-semibold text-slate-600">Klik untuk memilih berkas</span>
+              <span class="mt-0.5 text-[11px] text-slate-400">PDF, JPG, PNG</span>
+              <input type="file" class="hidden" />
+            </label>
+            <ul class="mt-2 space-y-1.5">
+              <li class="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                <i data-lucide="file-text" width="15" height="15" class="text-blue-600"></i>
+                <span class="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">berita-acara-penerimaan-BB-0001.pdf</span>
+                <span class="text-[11px] tabular-nums text-slate-400">180 KB</span>
+                <button class="shrink-0 text-slate-400 transition hover:text-red-600" aria-label="Hapus lampiran"><i data-lucide="x" width="14" height="14"></i></button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 5. BADGE ============================== -->
+      <section data-sg="Badge & Indikator" id="badge" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">5. Badge &amp; Indikator</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Badge berbentuk pil dengan ring tipis. Warna ditentukan oleh nilainya (lihat peta warna di bawah).</p>
+        </div>
+        <div class="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status barang bukti, tahap, akun, peminjaman</p>
+            <div class="flex flex-wrap gap-2" id="badges"></div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Jenis riwayat (dengan ikon)</p>
+            <div class="flex flex-wrap gap-2" id="jenis-badges"></div>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-3">
+            <div>
+              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Kondisi</p>
+              <div class="flex flex-col gap-1.5">
+                <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-600"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Baik</span>
+                <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-600"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Rusak Ringan</span>
+                <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-600"><span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>Rusak Berat</span>
+              </div>
+            </div>
+            <div>
+              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Avatar (inisial)</p>
+              <div class="flex items-center gap-2">
+                <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-navy-800 text-[10px] font-bold text-white">AS</span>
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-navy-800 text-xs font-bold text-white">DK</span>
+                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-navy-800 text-sm font-bold text-white">BS</span>
+              </div>
+            </div>
+            <div>
+              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Penghitung &amp; notifikasi</p>
+              <div class="flex items-center gap-3">
+                <span class="inline-flex h-6 min-w-[26px] items-center justify-center rounded-full bg-slate-100 px-1.5 text-xs font-bold tabular-nums text-slate-600">3</span>
+                <span class="relative grid h-9 w-9 place-items-center rounded-lg text-slate-500">
+                  <i data-lucide="bell" width="18" height="18"></i>
+                  <span class="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">5</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 6. KARTU ============================== -->
+      <section data-sg="Kartu" id="kartu" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">6. Kartu</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Semua konten dibungkus kartu putih: <code class="sg-code text-xs">rounded-xl border border-slate-200 bg-white shadow-card</code>.</p>
+        </div>
+
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Stat card (dashboard)</p>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <a href="#kartu" class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card transition hover:border-blue-300 hover:shadow-md">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-blue-50 text-blue-600"><i data-lucide="archive" width="19" height="19"></i></span>
+            <div class="min-w-0"><p class="text-xs font-medium text-slate-500">Total Barang Bukti</p><p class="mt-0.5 text-2xl font-bold leading-none tabular-nums text-navy-800">13</p><p class="mt-1.5 truncate text-[11px] text-slate-400">1 draf belum lengkap</p></div>
+          </a>
+          <a href="#kartu" class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card transition hover:border-blue-300 hover:shadow-md">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-600"><i data-lucide="check-circle-2" width="19" height="19"></i></span>
+            <div class="min-w-0"><p class="text-xs font-medium text-slate-500">Tersedia</p><p class="mt-0.5 text-2xl font-bold leading-none tabular-nums text-navy-800">9</p><p class="mt-1.5 truncate text-[11px] text-slate-400">69% dari total</p></div>
+          </a>
+          <a href="#kartu" class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card transition hover:border-blue-300 hover:shadow-md">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-amber-50 text-amber-600"><i data-lucide="arrow-up-right" width="19" height="19"></i></span>
+            <div class="min-w-0"><p class="text-xs font-medium text-slate-500">Dipinjam</p><p class="mt-0.5 text-2xl font-bold leading-none tabular-nums text-navy-800">1</p><p class="mt-1.5 truncate text-[11px] text-slate-400">1 belum kembali</p></div>
+          </a>
+          <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card transition">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-800"><i data-lucide="folder-open" width="19" height="19"></i></span>
+            <div class="min-w-0"><p class="text-xs font-medium text-slate-500">Total Perkara</p><p class="mt-0.5 text-2xl font-bold leading-none tabular-nums text-navy-800">8</p><p class="mt-1.5 truncate text-[11px] text-slate-400">tanpa link (div)</p></div>
+          </div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Card dengan header &amp; aksi + InfoGrid</p>
+            <section class="rounded-xl border border-slate-200 bg-white shadow-card">
+              <header class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+                <div class="min-w-0">
+                  <h3 class="text-sm font-bold text-navy-800">Informasi Barang Bukti</h3>
+                  <p class="mt-0.5 text-xs text-slate-500">Identitas dan kondisi fisik barang.</p>
+                </div>
+                <button class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-800"><i data-lucide="pencil" width="14" height="14"></i>Edit</button>
+              </header>
+              <div class="p-5">
+                <dl class="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                  <div><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Kode</dt><dd class="mt-0.5 break-words text-sm text-slate-700">BB-2025-0001</dd></div>
+                  <div><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</dt><dd class="mt-0.5 text-sm"><span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Tersedia</span></dd></div>
+                  <div><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Nomor Seri</dt><dd class="mt-0.5 break-words text-sm text-slate-700">SN-A1B2C3D4</dd></div>
+                  <div><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Catatan</dt><dd class="mt-0.5 text-sm"><span class="text-slate-400">—</span></dd></div>
+                  <div class="sm:col-span-2"><dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Deskripsi (wide)</dt><dd class="mt-0.5 break-words text-sm text-slate-700">Unit laptop warna hitam, kondisi menyala normal. Diterima dalam kantong segel bukti.</dd></div>
+                </dl>
+              </div>
+            </section>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Form section (bagian form panjang)</p>
+            <section class="rounded-xl border border-slate-200 bg-white shadow-card">
+              <header class="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-50 text-blue-600"><i data-lucide="package" width="17" height="17"></i></span>
+                <div>
+                  <h3 class="text-sm font-bold text-navy-800">Identitas Barang</h3>
+                  <p class="mt-0.5 text-xs text-slate-500">Nama, kategori, dan ciri fisik barang bukti.</p>
+                </div>
+              </header>
+              <div class="grid gap-4 px-5 py-5 sm:grid-cols-2">
+                <label class="block"><span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Nama<span class="text-red-500">*</span></span><input class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" /></label>
+                <label class="block"><span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Nomor Seri</span><input class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" /></label>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 7. TABS ============================== -->
+      <section data-sg="Tabs" id="tabs" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">7. Tabs</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Garis bawah biru untuk tab aktif.</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <div class="flex gap-1 overflow-x-auto border-b border-slate-200" id="tabbar">
+            <button data-tab="1" class="flex items-center gap-1.5 whitespace-nowrap border-b-2 border-blue-600 px-3.5 py-2.5 text-[13px] font-semibold text-blue-700 transition"><i data-lucide="file-bar-chart" width="15" height="15"></i>Rekap Barang Bukti</button>
+            <button data-tab="2" class="flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[13px] font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"><i data-lucide="folder-open" width="15" height="15"></i>Perkara</button>
+            <button data-tab="3" class="flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3.5 py-2.5 text-[13px] font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"><i data-lucide="history" width="15" height="15"></i>Riwayat</button>
+          </div>
+          <p class="pt-4 text-xs text-slate-500" id="tabcontent">Isi tab 1</p>
+        </div>
+      </section>
+
+      <!-- ============================== 8. TABEL ============================== -->
+      <section data-sg="Tabel & Pagination" id="tabel" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">8. Tabel &amp; Pagination</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Tabel di dalam Card tanpa padding (<code class="sg-code text-xs">noPad</code>), header abu-abu huruf kapital kecil, baris dipisah garis tipis, aksi rata kanan.</p>
+        </div>
+
+        <!-- Toolbar filter -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative w-full sm:w-72">
+            <i data-lucide="search" width="15" height="15" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="Cari nomor LP atau uraian…" />
+          </div>
+          <div class="relative w-[150px]">
+            <select class="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15"><option>Semua tahap</option><option>Lidik</option><option>Sidik</option></select>
+            <i data-lucide="chevron-down" width="15" height="15" class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          </div>
+          <input type="date" class="w-[150px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" />
+          <span class="text-xs text-slate-400">s.d.</span>
+          <input type="date" class="w-[150px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" />
+          <span class="flex-1"></span>
+          <button class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><i data-lucide="plus" width="16" height="16"></i>Tambah Perkara</button>
+        </div>
+
+        <section class="rounded-xl border border-slate-200 bg-white shadow-card">
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[880px] text-left text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <th class="px-5 py-3 font-semibold">Nomor LP</th>
+                  <th class="px-4 py-3 font-semibold">Tanggal Laporan</th>
+                  <th class="px-4 py-3 font-semibold">Nama / Judul Perkara</th>
+                  <th class="px-4 py-3 font-semibold">Tahap</th>
+                  <th class="px-4 py-3 font-semibold">Penyidik</th>
+                  <th class="px-4 py-3 text-center font-semibold">Jumlah BB</th>
+                  <th class="px-5 py-3 text-right font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100" id="table-body"></tbody>
+            </table>
+          </div>
+          <div class="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 sm:flex-row">
+            <p class="text-xs text-slate-500">Menampilkan <span class="font-semibold tabular-nums text-slate-700">1–3</span> dari <span class="font-semibold tabular-nums text-slate-700">24</span> data</p>
+            <div class="flex items-center gap-1">
+              <button disabled class="grid h-8 w-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-500 transition disabled:cursor-not-allowed disabled:opacity-40"><i data-lucide="chevron-left" width="15" height="15"></i></button>
+              <button class="h-8 min-w-[32px] rounded-md bg-blue-600 px-2 text-xs font-semibold tabular-nums text-white shadow-sm transition">1</button>
+              <button class="h-8 min-w-[32px] rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold tabular-nums text-slate-600 transition hover:bg-slate-50">2</button>
+              <span class="px-1 text-xs text-slate-400">…</span>
+              <button class="h-8 min-w-[32px] rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold tabular-nums text-slate-600 transition hover:bg-slate-50">8</button>
+              <button class="grid h-8 w-8 place-items-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-navy-800"><i data-lucide="chevron-right" width="15" height="15"></i></button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============================== 9. EMPTY & ALERT ============================== -->
+      <section data-sg="Empty State & Pesan" id="pesan" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">9. Empty State &amp; Pesan</h2>
+        </div>
+        <div class="grid gap-4 lg:grid-cols-2">
+          <section class="rounded-xl border border-slate-200 bg-white shadow-card">
+            <div class="flex flex-col items-center justify-center px-6 py-14 text-center">
+              <div class="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><i data-lucide="folder-open" width="26" height="26"></i></div>
+              <h3 class="mt-4 text-sm font-bold text-navy-800">Tidak ada perkara yang cocok</h3>
+              <p class="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">Ubah kata kunci pencarian atau filter, atau catat perkara baru untuk memulai.</p>
+              <div class="mt-5"><button class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><i data-lucide="plus" width="16" height="16"></i>Tambah Perkara</button></div>
+            </div>
+          </section>
+          <div class="space-y-3">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pesan error (form / login)</p>
+            <div class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-medium text-red-700">
+              <i data-lucide="alert-triangle" width="14" height="14" class="mt-0.5 shrink-0"></i>
+              Akun ini berstatus nonaktif. Hubungi administrator.
+            </div>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Banner peringatan</p>
+            <div class="flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div class="flex items-start gap-3">
+                <i data-lucide="alert-triangle" width="18" height="18" class="mt-0.5 shrink-0 text-amber-600"></i>
+                <p class="text-xs leading-relaxed text-amber-800"><span class="font-bold">2 barang dipinjam melewati tenggat.</span> Segera catat pengembaliannya.</p>
+              </div>
+              <button class="text-amber-500 transition hover:text-amber-700" aria-label="Tutup"><i data-lucide="x" width="16" height="16"></i></button>
+            </div>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Kotak info (status pinjaman)</p>
+            <div class="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
+              <i data-lucide="info" width="14" height="14" class="mt-0.5 shrink-0"></i>
+              Barang ini memiliki peminjaman yang belum kembali.
+            </div>
+            <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-500">
+              <span class="font-semibold text-slate-600">Catatan:</span> kotak putus-putus untuk informasi tambahan.
+            </div>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Catatan kecil di bawah kartu</p>
+            <p class="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-400">
+              <i data-lucide="info" width="13" height="13" class="mt-px shrink-0"></i>
+              <span>Angka pada halaman ini dihitung dari data di database.</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 10. TIMELINE ============================== -->
+      <section data-sg="Timeline Riwayat" id="timeline" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">10. Timeline Riwayat (chain of custody)</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Dipakai di detail barang bukti, dashboard, dan halaman riwayat.</p>
+        </div>
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <ol id="timeline-list"></ol>
+        </section>
+      </section>
+
+      <!-- ============================== 11. MODAL & TOAST ============================== -->
+      <section data-sg="Modal & Toast" id="modal" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">11. Modal, Dialog Konfirmasi &amp; Toast</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Klik tombol untuk melihatnya. Modal ditutup dengan tombol X, klik latar, atau Esc.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <button onclick="openModal('modal-form')" class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><i data-lucide="arrow-right-left" width="16" height="16"></i>Buka Modal Form</button>
+          <button onclick="openModal('modal-confirm')" class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"><i data-lucide="trash-2" width="16" height="16"></i>Dialog Hapus</button>
+          <span class="w-px self-stretch bg-slate-200"></span>
+          <button onclick="showToast('success','Perkara disimpan','LP/87/III/2025 berhasil ditambahkan.')" class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-800">Toast sukses</button>
+          <button onclick="showToast('error','Formulir belum lengkap','Periksa kembali isian yang ditandai merah.')" class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-800">Toast error</button>
+          <button onclick="showToast('info','Anda telah keluar','Sesi diakhiri.')" class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-800">Toast info</button>
+        </div>
+      </section>
+
+      <!-- ============================== 12. KERANGKA APLIKASI ============================== -->
+      <section data-sg="Sidebar & Header" id="kerangka" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">12. Sidebar &amp; Header</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Kerangka halaman setelah login. Sidebar navy lebar 64 (16rem), header putih tinggi 16 (4rem) dengan breadcrumb.</p>
+        </div>
+        <div class="flex h-[560px] overflow-hidden rounded-xl border border-slate-200 shadow-card">
+          <!-- Sidebar -->
+          <div class="flex h-full w-64 shrink-0 flex-col bg-navy-800 text-slate-300">
+            <div class="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+              <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-600 text-white shadow-sm"><i data-lucide="shield" width="20" height="20"></i></span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-bold tracking-wide text-white">SIBER EVIDENCE</p>
+                <p class="text-[10px] leading-tight text-slate-400">Sistem Pengelolaan Barang Bukti<br />Subbid Siber · Polda Sulawesi Utara</p>
+              </div>
+            </div>
+            <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4" id="side-nav"></nav>
+            <div class="border-t border-white/10 p-3">
+              <div class="mb-2 flex items-center gap-2.5 rounded-lg bg-white/5 px-3 py-2.5">
+                <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-navy-800 text-[10px] font-bold text-white">AS</span>
+                <div class="min-w-0">
+                  <p class="truncate text-xs font-semibold text-white">Administrator Sistem</p>
+                  <p class="truncate text-[10px] text-slate-400">Administrator · admin</p>
+                </div>
+              </div>
+              <button class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-300 transition hover:bg-red-500/10 hover:text-red-300"><i data-lucide="log-out" width="18" height="18"></i>Keluar</button>
+              <button class="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-400 transition hover:bg-white/5 hover:text-white"><i data-lucide="chevrons-left" width="18" height="18"></i>Ringkas Sidebar</button>
+            </div>
+          </div>
+          <!-- Area konten -->
+          <div class="flex min-w-0 flex-1 flex-col bg-slate-50">
+            <header class="border-b border-slate-200 bg-white/90 backdrop-blur">
+              <div class="flex h-16 items-center gap-3 px-6">
+                <div class="min-w-0 flex-1">
+                  <nav class="flex items-center gap-1 text-[11px] text-slate-400">
+                    <a href="#kerangka" class="truncate hover:text-blue-600">Beranda</a>
+                    <i data-lucide="chevron-right" width="11" height="11" class="shrink-0 text-slate-300"></i>
+                    <a href="#kerangka" class="truncate hover:text-blue-600">Data Barang Bukti</a>
+                    <i data-lucide="chevron-right" width="11" height="11" class="shrink-0 text-slate-300"></i>
+                    <span class="truncate font-medium text-slate-600">BB-2025-0001</span>
+                  </nav>
+                  <h1 class="truncate text-lg font-bold leading-tight text-navy-800">Detail Barang Bukti</h1>
+                </div>
+                <div class="relative">
+                  <button data-dd="dd-notif" class="relative grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-navy-800" aria-label="Notifikasi">
+                    <i data-lucide="bell" width="18" height="18"></i>
+                    <span class="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">3</span>
+                  </button>
+                  <div id="dd-notif" class="anim-fade-up absolute right-0 top-full z-50 mt-2 hidden w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <p class="text-sm font-bold text-navy-800">Notifikasi Aktivitas</p>
+                      <button class="text-[11px] font-semibold text-blue-600 hover:underline">Tandai dibaca</button>
+                    </div>
+                    <div class="max-h-80 overflow-y-auto" id="notif-list"></div>
+                    <a href="#kerangka" class="block border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 text-center text-[11px] font-semibold text-blue-600 hover:bg-slate-50">Lihat semua riwayat perpindahan</a>
+                  </div>
+                </div>
+                <span class="h-6 w-px bg-slate-200"></span>
+                <div class="relative">
+                  <button data-dd="dd-profil" class="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-slate-100" aria-label="Menu profil">
+                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-navy-800 text-[10px] font-bold text-white">AS</span>
+                    <span class="text-left">
+                      <span class="block max-w-[150px] truncate text-xs font-bold text-navy-800">Administrator Sistem</span>
+                      <span class="block text-[10px] text-slate-500">Administrator</span>
+                    </span>
+                    <i data-lucide="chevron-down" width="14" height="14" class="text-slate-400"></i>
+                  </button>
+                  <div id="dd-profil" class="anim-fade-up absolute right-0 top-full z-50 mt-2 hidden w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div class="flex items-center gap-3 px-4 py-3.5">
+                      <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-navy-800 text-xs font-bold text-white">AS</span>
+                      <div class="min-w-0">
+                        <p class="truncate text-xs font-bold text-navy-800">Administrator Sistem</p>
+                        <p class="truncate text-[11px] text-slate-500">@admin</p>
+                        <div class="mt-1"><span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-navy-50 px-2 py-0.5 text-[11px] font-semibold text-navy-800 ring-1 ring-inset ring-navy-800/20">Administrator</span></div>
+                      </div>
+                    </div>
+                    <div class="border-t border-slate-100 p-1.5">
+                      <a href="#kerangka" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-navy-800"><i data-lucide="settings" width="15" height="15"></i>Pengaturan</a>
+                      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"><i data-lucide="log-out" width="15" height="15"></i>Keluar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+            <div class="flex-1 overflow-y-auto p-6">
+              <a href="#kerangka" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-blue-700"><i data-lucide="arrow-left" width="14" height="14"></i>Kembali ke Data Barang Bukti</a>
+              <div class="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/60 p-10 text-center text-xs text-slate-400">Area konten halaman (padding p-6 / lg:px-8)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 13. HALAMAN KHUSUS ============================== -->
+      <section data-sg="Login, 404 & 403" id="khusus" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">13. Login, 404 &amp; 403</h2>
+        </div>
+        <div class="grid gap-4 lg:grid-cols-2">
+          <!-- Login -->
+          <div class="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-10">
+            <div class="mb-6 flex items-center gap-3">
+              <span class="grid h-12 w-12 place-items-center rounded-xl bg-navy-800 text-white shadow-card"><i data-lucide="shield" width="24" height="24"></i></span>
+              <div>
+                <p class="text-lg font-extrabold tracking-wide text-navy-800">SIBER EVIDENCE</p>
+                <p class="text-xs text-slate-500">Sistem Pengelolaan Barang Bukti</p>
+              </div>
+            </div>
+            <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:p-8">
+              <h1 class="text-base font-bold text-navy-800">Masuk ke Aplikasi</h1>
+              <p class="mt-0.5 text-xs text-slate-500">Subbid Siber — Ditreskrimsus Polda Sulawesi Utara</p>
+              <form class="mt-6 space-y-4" onsubmit="return false">
+                <label class="block">
+                  <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Nama Pengguna<span class="text-red-500">*</span></span>
+                  <div class="relative">
+                    <i data-lucide="user" width="15" height="15" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="cth. admin" />
+                  </div>
+                </label>
+                <label class="block">
+                  <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Kata Sandi<span class="text-red-500">*</span></span>
+                  <div class="relative">
+                    <i data-lucide="lock" width="15" height="15" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="password" class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-10 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="••••••••" />
+                  </div>
+                </label>
+                <button class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><i data-lucide="shield" width="16" height="16"></i>Masuk</button>
+              </form>
+              <p class="mt-5 border-t border-slate-100 pt-4 text-[11px] leading-relaxed text-slate-400">Untuk penggunaan internal Subbid Siber Ditreskrimsus Polda Sulawesi Utara.</p>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <!-- 404 -->
+            <section class="rounded-xl border border-slate-200 bg-white shadow-card">
+              <div class="grid place-items-center px-6 py-12 text-center">
+                <div class="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><i data-lucide="search-x" width="26" height="26"></i></div>
+                <h2 class="mt-4 text-lg font-bold text-navy-800">Halaman tidak ditemukan</h2>
+                <p class="mt-1 max-w-md text-sm text-slate-500">Tautan yang Anda buka tidak tersedia.</p>
+                <a href="#khusus" class="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><i data-lucide="arrow-left" width="16" height="16"></i>Kembali ke Dashboard</a>
+              </div>
+            </section>
+            <!-- 403 -->
+            <section class="rounded-xl border border-slate-200 bg-white shadow-card">
+              <div class="grid place-items-center px-6 py-12 text-center">
+                <div class="grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-500"><i data-lucide="lock" width="26" height="26"></i></div>
+                <h2 class="mt-4 text-lg font-bold text-navy-800">Akses ditolak</h2>
+                <p class="mt-1 max-w-md text-sm text-slate-500">Halaman ini hanya dapat diakses oleh Administrator.</p>
+                <a href="#khusus" class="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><i data-lucide="arrow-left" width="16" height="16"></i>Kembali ke Dashboard</a>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================== 14. KOP CETAK ============================== -->
+      <section data-sg="Kop Cetak" id="cetak" class="space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-navy-800">14. Kop Cetak (laporan A4)</h2>
+          <p class="mt-0.5 text-sm text-slate-500">Di aplikasi hanya muncul saat dicetak (<code class="sg-code text-xs">print-only</code>). Ukuran halaman <code class="sg-code text-xs">@page { size: A4; margin: 14mm; }</code>.</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-card">
+          <div class="mb-4 border-b-2 border-navy-800 pb-3 text-center">
+            <p class="text-sm font-bold tracking-wide text-navy-800">KEPOLISIAN NEGARA REPUBLIK INDONESIA</p>
+            <p class="text-sm font-semibold text-navy-800">POLDA SULAWESI UTARA</p>
+            <p class="text-xs text-navy-800">DIREKTORAT RESERSE KRIMINAL KHUSUS — SUBBID SIBER</p>
+            <p class="mt-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">Rekap Barang Bukti per Lokasi Penyimpanan</p>
+          </div>
+          <p class="text-center text-[11px] text-slate-400">(isi tabel laporan)</p>
+        </div>
+      </section>
+
+      <footer class="border-t border-slate-200 pt-6 text-[11px] text-slate-400">
+        Katalog komponen SIBER EVIDENCE — disusun dari prototipe index.html.
+      </footer>
+    </div>
+  </main>
+</div>
+
+<!-- ============================== MODAL ============================== -->
+<div id="modal-form" class="fixed inset-0 z-[90] hidden items-end justify-center p-4 sm:items-center">
+  <div class="absolute inset-0 bg-navy-950/50" data-close></div>
+  <div class="anim-fade-up relative flex max-h-[92vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-2xl">
+    <header class="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+      <div>
+        <h3 class="text-sm font-bold text-navy-800">Catat Perpindahan Barang Bukti</h3>
+        <p class="mt-0.5 text-xs leading-relaxed text-slate-500">Setiap kejadian ditambahkan ke riwayat dan tidak dapat diubah.</p>
+      </div>
+      <button data-close class="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Tutup"><i data-lucide="x" width="17" height="17"></i></button>
+    </header>
+    <div class="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+      <label class="block">
+        <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Jenis Kejadian<span class="text-red-500">*</span></span>
+        <div class="relative">
+          <select class="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-sm text-slate-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15"><option>Perpindahan</option><option>Peminjaman</option><option>Pengembalian</option><option>Pemeriksaan</option><option>Pengalihan</option></select>
+          <i data-lucide="chevron-down" width="15" height="15" class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        </div>
+      </label>
+      <label class="block">
+        <span class="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">Alasan / Keperluan<span class="text-red-500">*</span></span>
+        <textarea rows="3" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15" placeholder="cth. Pemeriksaan forensik digital"></textarea>
+      </label>
+    </div>
+    <footer class="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3">
+      <button data-close class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-800">Batal</button>
+      <button data-close class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><i data-lucide="save" width="16" height="16"></i>Simpan Kejadian</button>
+    </footer>
+  </div>
+</div>
+
+<div id="modal-confirm" class="fixed inset-0 z-[90] hidden items-end justify-center p-4 sm:items-center">
+  <div class="absolute inset-0 bg-navy-950/50" data-close></div>
+  <div class="anim-fade-up relative flex max-h-[92vh] w-full max-w-md flex-col rounded-xl bg-white shadow-2xl">
+    <header class="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+      <div><h3 class="text-sm font-bold text-navy-800">Hapus Data Perkara?</h3></div>
+      <button data-close class="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Tutup"><i data-lucide="x" width="17" height="17"></i></button>
+    </header>
+    <div class="flex-1 overflow-y-auto px-5 py-4">
+      <div class="flex items-start gap-3">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-50 text-red-600"><i data-lucide="alert-triangle" width="19" height="19"></i></span>
+        <div class="text-sm leading-relaxed text-slate-600">Data perkara <span class="font-semibold text-navy-800">LP/87/III/2025/Ditreskrimsus</span> akan dihapus dan tidak dapat dibatalkan.</div>
+      </div>
+    </div>
+    <footer class="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3">
+      <button data-close class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-navy-800">Batal</button>
+      <button data-close class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700">Hapus Perkara</button>
+    </footer>
+  </div>
+</div>
+
+<!-- Wadah toast -->
+<div id="toaster" class="fixed right-4 top-4 z-[100] flex w-[340px] max-w-[calc(100vw-2rem)] flex-col gap-2"></div>
+
+<script>
+  /* ---------- Data peta warna (sama dengan index.html) ---------- */
+  const BADGE_TONE = {
+    'Tersedia': 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+    'Dipinjam': 'bg-amber-50 text-amber-700 ring-amber-600/20',
+    'Dalam Pemeriksaan': 'bg-blue-50 text-blue-700 ring-blue-600/20',
+    'Dihancurkan': 'bg-red-50 text-red-700 ring-red-600/20',
+    'Draf': 'bg-slate-100 text-slate-600 ring-slate-500/20',
+    'Lidik': 'bg-sky-50 text-sky-700 ring-sky-600/20',
+    'Sidik': 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
+    'Aktif': 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+    'Nonaktif': 'bg-red-50 text-red-700 ring-red-600/20',
+    'Administrator': 'bg-navy-50 text-navy-800 ring-navy-800/20',
+    'Petugas': 'bg-slate-100 text-slate-600 ring-slate-500/20',
+    'Belum Kembali': 'bg-amber-50 text-amber-700 ring-amber-600/20',
+    'Sudah Kembali': 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+  };
+  const JENIS_META = {
+    Penerimaan:   { icon: 'package',          badge: 'bg-blue-50 text-blue-700 ring-blue-600/20',          dot: 'bg-blue-50 text-blue-600 ring-blue-100' },
+    Perpindahan:  { icon: 'arrow-right-left', badge: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',    dot: 'bg-indigo-50 text-indigo-600 ring-indigo-100' },
+    Peminjaman:   { icon: 'arrow-up-right',   badge: 'bg-amber-50 text-amber-700 ring-amber-600/20',       dot: 'bg-amber-50 text-amber-600 ring-amber-100' },
+    Pengembalian: { icon: 'arrow-down-left',  badge: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dot: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
+    Pemeriksaan:  { icon: 'search',           badge: 'bg-violet-50 text-violet-700 ring-violet-600/20',    dot: 'bg-violet-50 text-violet-600 ring-violet-100' },
+    Pengalihan:   { icon: 'shuffle',          badge: 'bg-slate-100 text-slate-600 ring-slate-500/20',      dot: 'bg-slate-100 text-slate-500 ring-slate-200' },
+  };
+  const NAVY = { 50: '#f3f6fb', 100: '#e4eaf4', 200: '#c5d3e8', 300: '#9db3d4', 400: '#6f8cbb', 500: '#4c6ba3', 600: '#375388', 700: '#2c436e', 800: '#172B4D', 900: '#122138', 950: '#0c1626' };
+  const badge = (label, cls) => `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${cls}">${label}</span>`;
+
+  /* ---------- Render bagian yang berulang ---------- */
+  document.getElementById('navy-swatches').innerHTML = Object.entries(NAVY).map(([k, v]) =>
+    `<div><div class="h-12 rounded-lg ring-1 ring-inset ring-black/5" style="background:${v}"></div>
+      <p class="mt-1.5 text-[11px] font-semibold text-navy-800">navy-${k}</p><p class="sg-code text-[10px] text-slate-400">${v}</p></div>`).join('');
+
+  document.getElementById('badges').innerHTML = Object.entries(BADGE_TONE).map(([k, v]) => badge(k, v)).join('');
+  document.getElementById('jenis-badges').innerHTML = Object.entries(JENIS_META).map(([k, m]) =>
+    badge(`<i data-lucide="${m.icon}" width="11" height="11"></i>${k}`, m.badge)).join('');
+
+  const rows = [
+    ['LP/87/III/2025/Ditreskrimsus', '14 Maret 2025', 'Dugaan penipuan daring melalui marketplace dengan modus barang tidak dikirim', 'Sidik', 'IPTU Bambang Setiawan', 3],
+    ['LP/102/III/2025/Ditreskrimsus', '28 Maret 2025', 'Akses ilegal terhadap sistem informasi instansi', 'Lidik', 'Ipda Danu Kusuma', 2],
+    ['LP/121/IV/2025/Ditreskrimsus', '18 April 2025', 'Penyebaran konten bermuatan pemerasan melalui media sosial', 'Sidik', 'AIPTU Rendi Pratama', 0],
+  ];
+  const iconBtn = (icon, title, danger) => `<button title="${title}" class="grid h-8 w-8 place-items-center rounded-md border bg-white transition ${danger
+    ? 'border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-navy-800'}"><i data-lucide="${icon}" width="15" height="15"></i></button>`;
+  document.getElementById('table-body').innerHTML = rows.map(r => `
+    <tr class="transition hover:bg-slate-50/70">
+      <td class="whitespace-nowrap px-5 py-3.5"><a href="#tabel" class="font-semibold text-navy-800 hover:text-blue-700">${r[0]}</a></td>
+      <td class="whitespace-nowrap px-4 py-3.5 text-xs tabular-nums text-slate-500">${r[1]}</td>
+      <td class="max-w-[300px] px-4 py-3.5"><span class="line-clamp-2 text-slate-700">${r[2]}</span></td>
+      <td class="px-4 py-3.5">${badge(r[3], BADGE_TONE[r[3]])}</td>
+      <td class="whitespace-nowrap px-4 py-3.5 text-slate-600">${r[4]}</td>
+      <td class="px-4 py-3.5 text-center"><span class="inline-flex h-6 min-w-[26px] items-center justify-center rounded-full bg-slate-100 px-1.5 text-xs font-bold tabular-nums text-slate-600">${r[5]}</span></td>
+      <td class="px-5 py-3.5"><div class="flex justify-end gap-1.5">${iconBtn('eye', 'Lihat detail')}${iconBtn('pencil', 'Edit')}${iconBtn('trash-2', 'Hapus', true)}</div></td>
+    </tr>`).join('');
+
+  const events = [
+    { jenis: 'Peminjaman', kode: 'BB-2025-0003', waktu: '12 Mei 2025, 08.50', asal: 'Lemari Kunci 01', tujuan: 'Ruang Forensik Digital', petugas: 'Ipda Danu Kusuma', alasan: 'Pencitraan disk (imaging) oleh tim forensik', harap: '26 Mei 2025', st: 'Belum Kembali' },
+    { jenis: 'Pemeriksaan', kode: 'BB-2025-0003', waktu: '29 April 2025, 13.30', asal: 'Lemari Kunci 01', tujuan: 'Lemari Kunci 01', petugas: 'Ipda Danu Kusuma', alasan: 'Verifikasi kondisi fisik berkala', catatan: 'Segel masih utuh, kondisi baik.' },
+    { jenis: 'Perpindahan', kode: 'BB-2025-0003', waktu: '22 April 2025, 11.00', asal: 'Ruang Barang Bukti — Rak A1', tujuan: 'Lemari Kunci 01', petugas: 'Ipda Danu Kusuma', alasan: 'Penataan ulang rak penyimpanan' },
+    { jenis: 'Penerimaan', kode: 'BB-2025-0003', waktu: '20 Maret 2025, 09.00', asal: 'Penyerahan Penyidik', tujuan: 'Ruang Barang Bukti — Rak A1', petugas: 'Ipda Danu Kusuma', alasan: 'Penerimaan awal barang bukti' },
+  ];
+  document.getElementById('timeline-list').innerHTML = events.map((r, i) => {
+    const m = JENIS_META[r.jenis]; const last = i === events.length - 1;
+    return `<li class="flex gap-3">
+      <div class="flex flex-col items-center">
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full ring-1 ring-inset ${m.dot}"><i data-lucide="${m.icon}" width="14" height="14"></i></span>
+        ${last ? '' : '<span class="my-1 w-px flex-1 bg-slate-200"></span>'}
+      </div>
+      <div class="min-w-0 flex-1 ${last ? 'pb-1' : 'pb-5'}">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          ${badge(`<i data-lucide="${m.icon}" width="11" height="11"></i>${r.jenis}`, m.badge)}
+          <a href="#timeline" class="text-xs font-bold text-navy-800 hover:text-blue-700">${r.kode}</a>
+          <span class="text-[11px] tabular-nums text-slate-400">${r.waktu}</span>
+        </div>
+        <p class="mt-1.5 flex flex-wrap items-center gap-1 text-xs text-slate-600">
+          <span class="truncate">${r.asal}</span>
+          <i data-lucide="arrow-right" width="12" height="12" class="shrink-0 text-slate-400"></i>
+          <span class="truncate font-medium text-navy-800">${r.tujuan}</span>
+        </p>
+        <p class="mt-0.5 text-[11px] text-slate-500">Petugas: ${r.petugas} · ${r.alasan}</p>
+        ${r.catatan ? `<p class="mt-1.5 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-slate-500">${r.catatan}</p>` : ''}
+        ${r.harap ? `<p class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500"><span>Harap kembali: <span class="font-semibold text-slate-700">${r.harap}</span></span>${badge(r.st, BADGE_TONE[r.st])}</p>` : ''}
+      </div>
+    </li>`;
+  }).join('');
+
+  document.getElementById('notif-list').innerHTML = events.slice(0, 3).map(r => {
+    const m = JENIS_META[r.jenis];
+    return `<a href="#kerangka" class="flex gap-3 border-b border-slate-50 px-4 py-3 transition last:border-0 hover:bg-slate-50">
+      <span class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ring-1 ring-inset ${m.dot}"><i data-lucide="${m.icon}" width="14" height="14"></i></span>
+      <span class="min-w-0"><span class="block truncate text-xs font-semibold text-navy-800">${r.jenis} — ${r.kode}</span>
+      <span class="mt-0.5 block truncate text-[11px] text-slate-500">${r.petugas} · ${r.waktu}</span></span></a>`;
+  }).join('');
+
+  const nav = [
+    ['layout-dashboard', 'Dashboard'], ['folder-open', 'Data Perkara'], ['archive', 'Data Barang Bukti', true],
+    ['history', 'Riwayat Perpindahan'], ['clipboard-list', 'Laporan'], ['users', 'Manajemen Pengguna'], ['settings', 'Pengaturan'],
+  ];
+  document.getElementById('side-nav').innerHTML = nav.map(([icon, label, active]) =>
+    `<a href="#kerangka" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition ${active
+      ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-white/5 hover:text-white'}"><i data-lucide="${icon}" width="18" height="18"></i><span class="truncate">${label}</span></a>`).join('');
+
+  /* ---------- Daftar isi ---------- */
+  document.getElementById('toc').innerHTML = [...document.querySelectorAll('[data-sg]')].map((s, i) =>
+    `<a href="#${s.id}" class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-navy-800">
+      <span class="w-5 text-[11px] tabular-nums text-slate-400">${i + 1}</span>${s.dataset.sg}</a>`).join('');
+
+  /* ---------- Interaksi ---------- */
+  document.querySelectorAll('#tabbar [data-tab]').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('#tabbar [data-tab]').forEach(b => {
+      const on = b === btn;
+      b.classList.toggle('border-blue-600', on); b.classList.toggle('text-blue-700', on);
+      b.classList.toggle('border-transparent', !on); b.classList.toggle('text-slate-500', !on);
+    });
+    document.getElementById('tabcontent').textContent = 'Isi tab ' + btn.dataset.tab;
+  }));
+
+  function openModal(id) { const m = document.getElementById(id); m.classList.remove('hidden'); m.classList.add('flex'); document.body.style.overflow = 'hidden'; }
+  function closeModals() { document.querySelectorAll('[id^="modal-"]').forEach(m => { m.classList.add('hidden'); m.classList.remove('flex'); }); document.body.style.overflow = ''; }
+  document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeModals));
+
+  document.querySelectorAll('[data-dd]').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const target = document.getElementById(btn.dataset.dd);
+    const wasHidden = target.classList.contains('hidden');
+    document.querySelectorAll('#dd-notif, #dd-profil').forEach(d => d.classList.add('hidden'));
+    if (wasHidden) target.classList.remove('hidden');
+  }));
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#dd-notif, #dd-profil')) document.querySelectorAll('#dd-notif, #dd-profil').forEach(d => d.classList.add('hidden'));
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModals(); document.querySelectorAll('#dd-notif, #dd-profil').forEach(d => d.classList.add('hidden')); } });
+
+  const TOAST_META = {
+    success: { icon: 'check', cls: 'border-emerald-500 text-emerald-600' },
+    error: { icon: 'alert-triangle', cls: 'border-red-500 text-red-600' },
+    info: { icon: 'info', cls: 'border-blue-500 text-blue-600' },
+  };
+  function showToast(type, title, message) {
+    const m = TOAST_META[type];
+    const el = document.createElement('div');
+    el.className = 'anim-toast flex items-start gap-3 rounded-lg border border-slate-200 border-l-4 bg-white p-3 shadow-lg ' + m.cls;
+    el.innerHTML = `<i data-lucide="${m.icon}" width="17" height="17" class="mt-0.5"></i>
+      <div class="min-w-0 flex-1"><p class="text-xs font-bold text-navy-800">${title}</p><p class="mt-0.5 text-[11px] leading-relaxed text-slate-500">${message}</p></div>
+      <button class="text-slate-300 transition hover:text-slate-500" aria-label="Tutup notifikasi"><i data-lucide="x" width="14" height="14"></i></button>`;
+    el.querySelector('button').onclick = () => el.remove();
+    document.getElementById('toaster').appendChild(el);
+    lucide.createIcons();
+    setTimeout(() => el.remove(), 4500);
+  }
+
+  lucide.createIcons();
+</script>
+</body>
+</html>

@@ -1,0 +1,2980 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIBER EVIDENCE — Sistem Pengelolaan Barang Bukti</title>
+
+<!-- Quick start: simpan sebagai index.html, buka di peramban. Akun demo: admin / demo123 -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: {
+            50: '#f3f6fb', 100: '#e4eaf4', 200: '#c5d3e8', 300: '#9db3d4', 400: '#6f8cbb',
+            500: '#4c6ba3', 600: '#375388', 700: '#2c436e', 800: '#172B4D', 900: '#122138', 950: '#0c1626',
+          },
+        },
+        fontFamily: { sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+        boxShadow: { card: '0 1px 2px 0 rgb(23 43 77 / 0.05), 0 1px 3px 0 rgb(23 43 77 / 0.06)' },
+      },
+    },
+  };
+</script>
+
+<style>
+  html { -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid #f8fafc; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+  @keyframes slideIn { from { transform: translateX(-100%); } to { transform: none; } }
+  .anim-fade-up { animation: fadeUp .22s ease both; }
+  .anim-toast { animation: toastIn .22s ease both; }
+  .anim-slide { animation: slideIn .22s ease both; }
+
+  .print-only { display: none; }
+  @media print {
+    @page { size: A4; margin: 14mm; }
+    body { background: #fff !important; }
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    .app-offset { padding-left: 0 !important; }
+    main { padding: 0 !important; max-width: none !important; }
+    .overflow-x-auto, .overflow-y-auto { overflow: visible !important; }
+    .shadow-card, .shadow-sm, .shadow-xl { box-shadow: none !important; }
+  }
+</style>
+
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  /* Register a TSX preset so the app below is genuine TypeScript + JSX, compiled in the browser. */
+  Babel.registerPreset('tsx', {
+    presets: [
+      [Babel.availablePresets['typescript'], { allExtensions: true, isTSX: true }],
+      Babel.availablePresets['react'],
+    ],
+  });
+</script>
+</head>
+
+<body class="bg-slate-50">
+  <div id="boot" style="position:fixed;inset:0;display:grid;place-items:center;background:#f8fafc;z-index:200">
+    <div style="text-align:center">
+      <div style="margin:0 auto 12px;height:38px;width:38px;border-radius:50%;border:3px solid #e2e8f0;border-top-color:#2563eb;animation:spin 1s linear infinite"></div>
+      <p style="font-size:13px;font-weight:600;color:#64748b;font-family:'Public Sans',sans-serif">Memuat SIBER EVIDENCE…</p>
+    </div>
+  </div>
+  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+  <div id="root"></div>
+
+<script type="text/babel" data-presets="tsx">
+/* =====================================================================================
+   SIBER EVIDENCE — Sistem Pengelolaan Barang Bukti (Demo Kerja Praktik)
+   Subbid Siber, Ditreskrimsus Polda Sulawesi Utara
+
+   Struktur kode (satu berkas untuk portabilitas; saat migrasi ke Vite + React + TS,
+   setiap bagian berkomentar menjadi modulnya sendiri):
+     1.  Tipe data & konstanta
+     2.  Utilitas
+     3.  Data contoh (seed) & penyimpanan localStorage
+     4.  Lapisan data — titik integrasi backend PHP/MySQL di kemudian hari
+     5.  Context aplikasi (state + aksi CRUD + toast)
+     6.  Komponen UI dasar (reusable)
+     7.  Router hash
+     8.  Kerangka: Sidebar, Header, AppShell
+     9.  Halaman: Login, Dashboard, Perkara (+detail), Barang Bukti (+form, detail),
+         Riwayat Perpindahan, Laporan, Manajemen Pengguna, Pengaturan
+     10. Mount
+
+   CATATAN: seluruh data adalah contoh fiktif, tersimpan di localStorage peramban.
+   Tidak ada koneksi ke basis data atau sistem produksi Kepolisian.
+   ===================================================================================== */
+
+const { useState, useEffect, useLayoutEffect, useRef, useMemo, useContext, createContext, useCallback, Fragment } = React;
+
+/* ============================== 1. TIPE DATA & KONSTANTA ============================== */
+
+type Role = 'Administrator' | 'Petugas';
+type Tahap = 'Lidik' | 'Sidik';
+type StatusBB = 'Tersedia' | 'Dipinjam' | 'Dalam Pemeriksaan' | 'Dihancurkan';
+type Kategori = 'Elektronik' | 'Media Penyimpanan' | 'Dokumen Digital' | 'Perangkat Jaringan' | 'Lainnya';
+type Kondisi = 'Baik' | 'Rusak Ringan' | 'Rusak Berat';
+type JenisRiwayat = 'Penerimaan' | 'Perpindahan' | 'Peminjaman' | 'Pengembalian' | 'Pemeriksaan' | 'Pengalihan';
+
+interface Perkara { id: string; nomorLP: string; tanggalLaporan: string; uraian: string; tahap: Tahap; penyidik: string; createdAt: string; }
+interface Lampiran { id: string; nama: string; tipe: string; ukuran: number; }
+interface BarangBukti {
+  id: string; kode: string; nama: string; kategori: Kategori; deskripsi: string; nomorSeri: string;
+  kondisi: Kondisi; nomorLP: string; tanggalPenerimaan: string; petugasPenerima: string;
+  lokasi: string; status: StatusBB; catatan: string; lampiran: Lampiran[]; draf: boolean; createdAt: string;
+}
+interface Riwayat {
+  id: string; kodeBB: string; jenis: JenisRiwayat; tanggalWaktu: string;
+  lokasiAsal: string; lokasiTujuan: string; petugas: string; alasan: string; catatan: string;
+  harapanKembali: string; statusKembali: '' | 'Belum Kembali' | 'Sudah Kembali';
+}
+interface UserAkun { id: string; username: string; nama: string; role: Role; status: 'Aktif' | 'Nonaktif'; aktivitasTerakhir: string; }
+interface StoreData { perkara: Perkara[]; barang: BarangBukti[]; riwayat: Riwayat[]; users: UserAkun[]; notifSeen: string; }
+
+const STORE_KEY = 'siber_evidence_v1';
+const SESSION_KEY = 'se_session';
+
+const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const KATEGORI: Kategori[] = ['Elektronik','Media Penyimpanan','Dokumen Digital','Perangkat Jaringan','Lainnya'];
+const KONDISI: Kondisi[] = ['Baik','Rusak Ringan','Rusak Berat'];
+const STATUS_BB: StatusBB[] = ['Tersedia','Dipinjam','Dalam Pemeriksaan','Dihancurkan'];
+const JENIS_RIWAYAT: JenisRiwayat[] = ['Penerimaan','Perpindahan','Peminjaman','Pengembalian','Pemeriksaan','Pengalihan'];
+const LOKASI = [
+  'Ruang Barang Bukti — Rak A1','Ruang Barang Bukti — Rak A2','Ruang Barang Bukti — Rak B1','Ruang Barang Bukti — Rak B2',
+  'Lemari Kunci 01','Lemari Kunci 02','Gudang Barang Bukti','Ruang Forensik Digital',
+];
+
+const JENIS_META: Record<string, { icon: string; badge: string; dot: string }> = {
+  Penerimaan:   { icon: 'package',          badge: 'bg-blue-50 text-blue-700 ring-blue-600/20',        dot: 'bg-blue-50 text-blue-600 ring-blue-100' },
+  Perpindahan:  { icon: 'arrow-right-left', badge: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',  dot: 'bg-indigo-50 text-indigo-600 ring-indigo-100' },
+  Peminjaman:   { icon: 'arrow-up-right',   badge: 'bg-amber-50 text-amber-700 ring-amber-600/20',     dot: 'bg-amber-50 text-amber-600 ring-amber-100' },
+  Pengembalian: { icon: 'arrow-down-left',  badge: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dot: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
+  Pemeriksaan:  { icon: 'search',           badge: 'bg-violet-50 text-violet-700 ring-violet-600/20',  dot: 'bg-violet-50 text-violet-600 ring-violet-100' },
+  Pengalihan:   { icon: 'shuffle',          badge: 'bg-slate-100 text-slate-600 ring-slate-500/20',    dot: 'bg-slate-100 text-slate-500 ring-slate-200' },
+};
+
+const BADGE_TONE: Record<string, string> = {
+  'Tersedia': 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+  'Dipinjam': 'bg-amber-50 text-amber-700 ring-amber-600/20',
+  'Dalam Pemeriksaan': 'bg-blue-50 text-blue-700 ring-blue-600/20',
+  'Dihancurkan': 'bg-red-50 text-red-700 ring-red-600/20',
+  'Draf': 'bg-slate-100 text-slate-600 ring-slate-500/20',
+  'Lidik': 'bg-sky-50 text-sky-700 ring-sky-600/20',
+  'Sidik': 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
+  'Aktif': 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+  'Nonaktif': 'bg-red-50 text-red-700 ring-red-600/20',
+  'Administrator': 'bg-navy-50 text-navy-800 ring-navy-800/20',
+  'Petugas': 'bg-slate-100 text-slate-600 ring-slate-500/20',
+  'Belum Kembali': 'bg-amber-50 text-amber-700 ring-amber-600/20',
+  'Sudah Kembali': 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+};
+
+const KONDISI_DOT: Record<string, string> = { 'Baik': 'bg-emerald-500', 'Rusak Ringan': 'bg-amber-500', 'Rusak Berat': 'bg-red-500' };
+const KAT_ICON: Record<string, string> = {
+  'Elektronik': 'laptop', 'Media Penyimpanan': 'hard-drive', 'Dokumen Digital': 'file-text',
+  'Perangkat Jaringan': 'wifi', 'Lainnya': 'package',
+};
+
+/* ============================== 2. UTILITAS ============================== */
+
+function cn(...xs: (string | false | null | undefined)[]): string { return xs.filter(Boolean).join(' '); }
+function uid(p = 'id'): string { return p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function pad2(n: number): string { return String(n).padStart(2, '0'); }
+function todayISO(): string { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function nowLocal(): string { const d = new Date(); return `${todayISO()}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+
+function fmtDate(iso?: string): string {
+  if (!iso) return '-';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return `${d} ${BULAN[m - 1]} ${y}`;
+}
+function fmtDateTime(s?: string): string {
+  if (!s) return '-';
+  const [d, t] = s.split('T');
+  return `${fmtDate(d)}${t ? ', ' + t.replace(':', '.') : ''}`;
+}
+function fmtBytes(n: number): string {
+  if (!n && n !== 0) return '-';
+  if (n < 1024) return n + ' B';
+  const u = ['KB', 'MB', 'GB']; let i = -1;
+  do { n /= 1024; i++; } while (n >= 1024 && i < 2);
+  return n.toFixed(n < 10 ? 1 : 0).replace('.', ',') + ' ' + u[i];
+}
+function initials(nama: string): string {
+  return (nama || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+function exportCsv(filename: string, headers: string[], rows: (string | number)[][]): void {
+  const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [headers.map(esc).join(';'), ...rows.map(r => r.map(esc).join(';'))].join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 800);
+}
+function nextKodeBB(barang: BarangBukti[]): string {
+  let max = 0;
+  barang.forEach(b => { const m = b.kode.match(/^BB-\d{4}-(\d+)$/); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  return `BB-${new Date().getFullYear()}-${pad2(max + 1).padStart(4, '0')}`;
+}
+
+/* ============================== 3. DATA CONTOH & PENYIMPANAN ============================== */
+
+function seedStore(): StoreData {
+  const users: UserAkun[] = [
+    { id: 'usr-1', username: 'admin', nama: 'Administrator Sistem', role: 'Administrator', status: 'Aktif', aktivitasTerakhir: '2025-05-15T10:45' },
+    { id: 'usr-2', username: 'b.setiawan', nama: 'IPTU Bambang Setiawan', role: 'Petugas', status: 'Aktif', aktivitasTerakhir: '2025-05-15T09:20' },
+    { id: 'usr-3', username: 'r.pratama', nama: 'AIPTU Rendi Pratama', role: 'Petugas', status: 'Aktif', aktivitasTerakhir: '2025-05-14T15:05' },
+    { id: 'usr-4', username: 's.wulandari', nama: 'AIPDA Sari Wulandari', role: 'Petugas', status: 'Nonaktif', aktivitasTerakhir: '2025-04-30T11:10' },
+    { id: 'usr-5', username: 'd.kusuma', nama: 'Ipda Danu Kusuma', role: 'Petugas', status: 'Aktif', aktivitasTerakhir: '2025-05-15T08:05' },
+  ];
+
+  const perkara: Perkara[] = [
+    { id: 'pk-1', nomorLP: 'LP/87/III/2025/Ditreskrimsus', tanggalLaporan: '2025-03-12', uraian: 'Penipuan dalam jual beli daring melalui marketplace dengan modus pengiriman barang fiktif.', tahap: 'Sidik', penyidik: 'IPTU Bambang Setiawan', createdAt: '2025-03-12T10:00' },
+    { id: 'pk-2', nomorLP: 'LP/102/III/2025/Ditreskrimsus', tanggalLaporan: '2025-03-28', uraian: 'Pembobolan akun media sosial dan penyalahgunaan data pribadi untuk permintaan uang tebusan.', tahap: 'Sidik', penyidik: 'AIPTU Rendi Pratama', createdAt: '2025-03-28T14:20' },
+    { id: 'pk-3', nomorLP: 'LP/45/IV/2025/Ditreskrimsus', tanggalLaporan: '2025-04-05', uraian: 'Penyebaran konten tidak senonoh melalui grup pesan tertutup.', tahap: 'Lidik', penyidik: 'AIPDA Sari Wulandari', createdAt: '2025-04-05T09:40' },
+    { id: 'pk-4', nomorLP: 'LP/121/IV/2025/Ditreskrimsus', tanggalLaporan: '2025-04-19', uraian: 'Penipuan investasi bodong berbasis aplikasi pinjaman daring.', tahap: 'Sidik', penyidik: 'IPTU Bambang Setiawan', createdAt: '2025-04-19T13:15' },
+    { id: 'pk-5', nomorLP: 'LP/133/IV/2025/Ditreskrimsus', tanggalLaporan: '2025-04-27', uraian: 'Pencurian dana melalui alat pembayaran dengan teknik skimming pada mesin ATM.', tahap: 'Lidik', penyidik: 'AIPTU Rendi Pratama', createdAt: '2025-04-27T16:00' },
+    { id: 'pk-6', nomorLP: 'LP/12/V/2025/Ditreskrimsus', tanggalLaporan: '2025-05-03', uraian: 'Ancaman kekerasan dan pemerasan melalui pesan elektronik.', tahap: 'Lidik', penyidik: 'AIPDA Sari Wulandari', createdAt: '2025-05-03T08:30' },
+  ];
+
+  const B = (
+    id: string, kode: string, nama: string, kategori: Kategori, deskripsi: string, nomorSeri: string,
+    kondisi: Kondisi, nomorLP: string, tanggalPenerimaan: string, petugasPenerima: string,
+    lokasi: string, status: StatusBB, catatan: string, lampiran: Lampiran[] = []
+  ): BarangBukti => ({
+    id, kode, nama, kategori, deskripsi, nomorSeri, kondisi, nomorLP, tanggalPenerimaan,
+    petugasPenerima, lokasi, status, catatan, lampiran, draf: false,
+    createdAt: tanggalPenerimaan + 'T09:00',
+  });
+
+  const barang: BarangBukti[] = [
+    B('bb-1', 'BB-2025-0001', 'Laptop Merk A Warna Hitam', 'Elektronik', 'Unit laptop warna hitam, kondisi menyala normal. Diterima dalam kantong segel bukti No. 001/LP-87.', 'SN-A1B2C3D4', 'Baik', 'LP/87/III/2025/Ditreskrimsus', '2025-03-14', 'Ipda Danu Kusuma', 'Ruang Barang Bukti — Rak A2', 'Tersedia', '', [{ id: 'lm-1', nama: 'berita-acara-penerimaan-BB-0001.pdf', tipe: 'application/pdf', ukuran: 184320 }]),
+    B('bb-2', 'BB-2025-0002', 'Telepon Pintar Merk B', 'Elektronik', 'Perangkat telepon pintar warna biru, terdapat retakan layar di sudut kanan atas.', 'SN-E5F6G7H8', 'Baik', 'LP/87/III/2025/Ditreskrimsus', '2025-03-14', 'Ipda Danu Kusuma', 'Ruang Barang Bukti — Rak A2', 'Tersedia', ''),
+    B('bb-3', 'BB-2025-0003', 'Hard Disk Eksternal 1 TB', 'Media Penyimpanan', 'Hard disk eksternal warna hitam, segel dalam kondisi utuh pada saat penerimaan.', 'SN-HDD-90122', 'Baik', 'LP/102/III/2025/Ditreskrimsus', '2025-03-30', 'Ipda Danu Kusuma', 'Ruang Forensik Digital', 'Dipinjam', 'Sedang dipinjam tim forensik digital untuk proses pencitraan disk (imaging).'),
+    B('bb-4', 'BB-2025-0004', 'Flash Disk 32 GB', 'Media Penyimpanan', 'Flash disk warna putih kapasitas 32 GB, terdapat keretakan pada bagian konektor.', '', 'Rusak Ringan', 'LP/102/III/2025/Ditreskrimsus', '2025-03-30', 'Ipda Danu Kusuma', 'Lemari Kunci 01', 'Tersedia', 'Perlu penanganan hati-hati saat pemeriksaan.'),
+    B('bb-5', 'BB-2025-0005', 'Kartu Memori microSD 64 GB', 'Media Penyimpanan', 'Kartu memori microSD terpasang pada adaptor SD.', '', 'Baik', 'LP/45/IV/2025/Ditreskrimsus', '2025-04-07', 'Ipda Danu Kusuma', 'Lemari Kunci 02', 'Tersedia', ''),
+    B('bb-6', 'BB-2025-0006', 'Telepon Pintar Merk C', 'Elektronik', 'Telepon pintar warna hitam, kondisi fisik baik, baterai terpasang.', 'SN-C9D8E7F6', 'Baik', 'LP/121/IV/2025/Ditreskrimsus', '2025-04-21', 'Ipda Danu Kusuma', 'Ruang Barang Bukti — Rak B1', 'Tersedia', ''),
+    B('bb-7', 'BB-2025-0007', 'Cetak Riwayat Transaksi Digital', 'Dokumen Digital', 'Print out riwayat transaksi sebanyak 27 lembar, halaman depan dilaminasi.', '', 'Baik', 'LP/121/IV/2025/Ditreskrimsus', '2025-04-21', 'AIPTU Rendi Pratama', 'Ruang Barang Bukti — Rak B2', 'Tersedia', 'Tersimpan dalam map bernomor.', [{ id: 'lm-2', nama: 'inventaris-cetak-transaksi.pdf', tipe: 'application/pdf', ukuran: 94208 }]),
+    B('bb-8', 'BB-2025-0008', 'Router Wi-Fi Tanpa Merek', 'Perangkat Jaringan', 'Router dengan antena eksternal, tidak menyala saat diperiksa.', 'SN-RTR-55401', 'Rusak Berat', 'LP/133/IV/2025/Ditreskrimsus', '2025-04-29', 'Ipda Danu Kusuma', 'Gudang Barang Bukti', 'Tersedia', 'Perangkat tidak menyala; disimpan untuk kepentingan dokumentasi perkara.'),
+    B('bb-9', 'BB-2025-0009', 'Kartu ATM Bekas', 'Lainnya', 'Tiga keping kartu dalam satu amplop segel.', '', 'Baik', 'LP/133/IV/2025/Ditreskrimsus', '2025-04-29', 'Ipda Danu Kusuma', 'Lemari Kunci 01', 'Tersedia', ''),
+    B('bb-10', 'BB-2025-0010', 'Kartu SIM Bekas', 'Lainnya', 'Dua keping kartu SIM dalam amplop segel.', '', 'Baik', 'LP/45/IV/2025/Ditreskrimsus', '2025-04-08', 'Ipda Danu Kusuma', 'Lemari Kunci 02', 'Tersedia', ''),
+    B('bb-11', 'BB-2025-0011', 'Laptop Merk D', 'Elektronik', 'Unit laptop warna abu-abu, kondisi menyala normal.', 'SN-D11E22F33', 'Baik', 'LP/12/V/2025/Ditreskrimsus', '2025-05-05', 'Ipda Danu Kusuma', 'Ruang Barang Bukti — Rak A1', 'Tersedia', ''),
+    B('bb-12', 'BB-2025-0012', 'Modem USB Seluler', 'Perangkat Jaringan', 'Modem USB dengan kemasan terbuka, terdapat bekas panas pada bodi.', 'SN-MDM-77012', 'Rusak Ringan', 'LP/133/IV/2025/Ditreskrimsus', '2025-04-30', 'Ipda Danu Kusuma', 'Gudang Barang Bukti', 'Dalam Pemeriksaan', 'Menunggu pemeriksaan lanjutan oleh tim forensik digital.'),
+    B('bb-13', 'BB-2025-0013', 'Telepon Pintar Rusak Terbakar', 'Elektronik', 'Perangkat rusak berat akibat terbakar, tidak dapat dinyalakan.', '', 'Rusak Berat', 'LP/102/III/2025/Ditreskrimsus', '2025-04-02', 'Ipda Danu Kusuma', 'Pemusnahan (Berita Acara No. 01/BA/IV/2025)', 'Dihancurkan', 'Dimusnahkan sesuai Berita Acara Pemusnahan Barang Bukti (data demo).'),
+  ];
+
+  const R = (
+    id: string, kodeBB: string, jenis: JenisRiwayat, tanggalWaktu: string, lokasiAsal: string,
+    lokasiTujuan: string, petugas: string, alasan: string, catatan: string = '',
+    harapanKembali: string = '', statusKembali: '' | 'Belum Kembali' | 'Sudah Kembali' = ''
+  ): Riwayat => ({ id, kodeBB, jenis, tanggalWaktu, lokasiAsal, lokasiTujuan, petugas, alasan, catatan, harapanKembali, statusKembali });
+
+  const riwayat: Riwayat[] = [
+    R('rv-1',  'BB-2025-0001', 'Penerimaan',   '2025-03-14T09:15', 'Penyerahan Penyidik', 'Ruang Barang Bukti — Rak A1', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti', 'Diterima dalam keadaan tersegel.'),
+    R('rv-2',  'BB-2025-0002', 'Penerimaan',   '2025-03-14T09:25', 'Penyerahan Penyidik', 'Ruang Barang Bukti — Rak A1', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-3',  'BB-2025-0013', 'Penerimaan',   '2025-04-02T10:10', 'Penyerahan Penyidik', 'Gudang Barang Bukti', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti', 'Perangkat rusak berat akibat terbakar.'),
+    R('rv-4',  'BB-2025-0003', 'Penerimaan',   '2025-03-30T10:05', 'Penyerahan Penyidik', 'Lemari Kunci 01', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-5',  'BB-2025-0004', 'Penerimaan',   '2025-03-30T10:20', 'Penyerahan Penyidik', 'Lemari Kunci 01', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti', 'Terdapat keretakan pada konektor.'),
+    R('rv-6',  'BB-2025-0005', 'Penerimaan',   '2025-04-07T08:40', 'Penyerahan Penyidik', 'Lemari Kunci 02', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-7',  'BB-2025-0010', 'Penerimaan',   '2025-04-08T09:00', 'Penyerahan Penyidik', 'Lemari Kunci 02', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-8',  'BB-2025-0003', 'Pemeriksaan',  '2025-04-15T13:30', 'Lemari Kunci 01', 'Lemari Kunci 01', 'Ipda Danu Kusuma', 'Verifikasi kondisi fisik berkala', 'Segel masih utuh, kondisi baik.'),
+    R('rv-9',  'BB-2025-0013', 'Pengalihan',   '2025-04-25T13:00', 'Gudang Barang Bukti', 'Pemusnahan (Berita Acara No. 01/BA/IV/2025)', 'IPTU Bambang Setiawan', 'Pemusnahan barang bukti sesuai berita acara', 'Contoh kejadian pemusnahan (data demo).'),
+    R('rv-10', 'BB-2025-0006', 'Penerimaan',   '2025-04-21T14:10', 'Penyerahan Penyidik', 'Ruang Barang Bukti — Rak B1', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-11', 'BB-2025-0007', 'Penerimaan',   '2025-04-21T14:25', 'Penyerahan Penyidik', 'Ruang Barang Bukti — Rak B2', 'AIPTU Rendi Pratama', 'Penerimaan awal barang bukti'),
+    R('rv-12', 'BB-2025-0001', 'Perpindahan',  '2025-04-22T11:00', 'Ruang Barang Bukti — Rak A1', 'Ruang Barang Bukti — Rak A2', 'Ipda Danu Kusuma', 'Penataan ulang rak penyimpanan'),
+    R('rv-13', 'BB-2025-0008', 'Penerimaan',   '2025-04-29T15:40', 'Penyerahan Penyidik', 'Gudang Barang Bukti', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-14', 'BB-2025-0009', 'Penerimaan',   '2025-04-29T15:55', 'Penyerahan Penyidik', 'Lemari Kunci 01', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-15', 'BB-2025-0012', 'Penerimaan',   '2025-04-30T15:40', 'Penyerahan Penyidik', 'Gudang Barang Bukti', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti', 'Menunggu pemeriksaan lanjutan.'),
+    R('rv-16', 'BB-2025-0011', 'Penerimaan',   '2025-05-05T09:35', 'Penyerahan Penyidik', 'Ruang Barang Bukti — Rak A1', 'Ipda Danu Kusuma', 'Penerimaan awal barang bukti'),
+    R('rv-17', 'BB-2025-0006', 'Peminjaman',   '2025-05-02T09:00', 'Ruang Barang Bukti — Rak B1', 'Ruang Forensik Digital', 'Ipda Danu Kusuma', 'Pemeriksaan forensik digital (ekstraksi data)', '', '2025-05-16', 'Sudah Kembali'),
+    R('rv-18', 'BB-2025-0006', 'Pengembalian', '2025-05-15T10:30', 'Ruang Forensik Digital', 'Ruang Barang Bukti — Rak B1', 'Ipda Danu Kusuma', 'Peminjaman selesai, barang dikembalikan ke penyimpanan', 'Hasil ekstraksi diserahkan kepada penyidik.'),
+    R('rv-19', 'BB-2025-0003', 'Peminjaman',   '2025-05-12T08:50', 'Lemari Kunci 01', 'Ruang Forensik Digital', 'Ipda Danu Kusuma', 'Pencitraan disk (imaging) oleh tim forensik', '', '2025-05-26', 'Belum Kembali'),
+  ];
+
+  return { perkara, barang, riwayat, users, notifSeen: '' };
+}
+
+function loadStore(): StoreData {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && Array.isArray(d.perkara) && Array.isArray(d.barang) && Array.isArray(d.riwayat) && Array.isArray(d.users)) return d;
+    }
+  } catch (e) { /* abaikan, gunakan seed */ }
+  const s = seedStore();
+  saveStore(s);
+  return s;
+}
+function saveStore(d: StoreData): void {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch (e) { /* kuota penuh — abaikan pada demo */ }
+}
+
+/* ============================== 4. LAPISAN DATA — TITIK INTEGRASI BACKEND ==============================
+   Saat ini seluruh aksi CRUD menulis ke localStorage (lihat AppProvider).
+   Untuk integrasi PHP + MySQL, ganti pemanggilan setData(...) pada AppProvider
+   dengan pemanggilan adapter di bawah ini, lalu hidrasi state dari respons API.
+   Struktur tabel minimum di MySQL: perkara, barang_bukti, riwayat_bukti, pengguna.
+
+   Contoh endpoint yang disarankan:
+     GET    /api/perkara                 POST   /api/perkara
+     PUT    /api/perkara/{id}            DELETE /api/perkara/{id}
+     GET    /api/barang-bukti            POST   /api/barang-bukti
+     PUT    /api/barang-bukti/{id}       DELETE /api/barang-bukti/{id}
+     GET    /api/riwayat?kode=BB-...     POST   /api/riwayat
+     GET    /api/laporan/rekap?dari=&sampai=
+   ============================================================================================== */
+
+async function apiFetch(path: string, options?: any): Promise<any> {
+  /* Belum aktif pada demo — kerangka untuk fetch() ke backend PHP di kemudian hari. */
+  throw new Error('Adapter backend belum diaktifkan pada mode demo.');
+}
+
+/* ============================== 5. CONTEXT APLIKASI ============================== */
+
+type ToastType = 'success' | 'error' | 'info';
+interface Toast { id: string; type: ToastType; title: string; message?: string; }
+
+const AppCtx = createContext<any>(null);
+function useApp(): any { return useContext(AppCtx); }
+
+function loadSession(): UserAkun | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    const data = loadStore();
+    return data.users.find((u: UserAkun) => u.username === s.username && u.status === 'Aktif') || null;
+  } catch (e) { return null; }
+}
+
+function AppProvider({ children }: { children: React.ReactNode }) {
+  const [data, setData] = useState<StoreData>(loadStore);
+  const [user, setUser] = useState<UserAkun | null>(loadSession);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  useEffect(() => { saveStore(data); }, [data]);
+  useEffect(() => { const b = document.getElementById('boot'); if (b) b.remove(); }, []);
+
+  const dismissToast = useCallback((id: string) => setToasts(t => t.filter(x => x.id !== id)), []);
+  const toast = useCallback((type: ToastType, title: string, message?: string) => {
+    const id = uid('t');
+    setToasts(t => [...t.slice(-3), { id, type, title, message }]);
+    window.setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4500);
+  }, []);
+
+  /* ---- autentikasi (demo) ---- */
+  function login(username: string, password: string, remember: boolean): { ok: boolean; msg?: string; nama?: string } {
+    const u = data.users.find((x: UserAkun) => x.username.toLowerCase() === username.trim().toLowerCase());
+    if (!u) return { ok: false, msg: 'Nama pengguna tidak terdaftar pada data demo.' };
+    if (u.status !== 'Aktif') return { ok: false, msg: 'Akun ini berstatus nonaktif. Hubungi administrator.' };
+    if (password !== 'demo123') return { ok: false, msg: 'Kata sandi salah. Untuk demo, gunakan kata sandi: demo123' };
+    const nu = { ...u, aktivitasTerakhir: nowLocal() };
+    setData(d => ({ ...d, users: d.users.map((x: UserAkun) => (x.id === u.id ? nu : x)) }));
+    const sess = JSON.stringify({ username: u.username });
+    (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, sess);
+    (remember ? sessionStorage : localStorage).removeItem(SESSION_KEY);
+    setUser(nu);
+    return { ok: true, nama: nu.nama };
+  }
+  function logout(): void {
+    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
+    setUser(null);
+  }
+
+  /* ---- CRUD perkara ---- */
+  function addPerkara(p: any): Perkara {
+    const np: Perkara = { ...p, nomorLP: p.nomorLP.trim(), id: uid('pk'), createdAt: nowLocal() };
+    setData(d => ({ ...d, perkara: [...d.perkara, np] }));
+    return np;
+  }
+  function updatePerkara(id: string, p: any): void {
+    setData(d => ({ ...d, perkara: d.perkara.map((x: Perkara) => (x.id === id ? { ...x, ...p, nomorLP: p.nomorLP.trim() } : x)) }));
+  }
+  function deletePerkara(id: string): { ok: boolean; msg?: string } {
+    const p = data.perkara.find((x: Perkara) => x.id === id);
+    if (!p) return { ok: false, msg: 'Perkara tidak ditemukan.' };
+    const linked = data.barang.filter((b: BarangBukti) => b.nomorLP === p.nomorLP).length;
+    if (linked > 0) return { ok: false, msg: `Tidak dapat dihapus: masih terdapat ${linked} barang bukti terkait LP ini.` };
+    setData(d => ({ ...d, perkara: d.perkara.filter((x: Perkara) => x.id !== id) }));
+    return { ok: true };
+  }
+
+  /* ---- CRUD barang bukti ---- */
+  function penerimaanEvent(nb: BarangBukti, alasan: string): Riwayat {
+    return {
+      id: uid('rv'), kodeBB: nb.kode, jenis: 'Penerimaan',
+      tanggalWaktu: (nb.tanggalPenerimaan || nowLocal().slice(0, 10)) + 'T09:00',
+      lokasiAsal: 'Penyerahan Penyidik', lokasiTujuan: nb.lokasi, petugas: nb.petugasPenerima,
+      alasan, catatan: nb.catatan || '', harapanKembali: '', statusKembali: '',
+    };
+  }
+  function addBarang(p: any): BarangBukti {
+    const nb: BarangBukti = { ...p, kode: p.kode.trim(), id: uid('bb'), createdAt: nowLocal() };
+    setData(d => {
+      const rv = [...d.riwayat];
+      if (!nb.draf) rv.push(penerimaanEvent(nb, 'Penerimaan awal barang bukti'));
+      return { ...d, barang: [...d.barang, nb], riwayat: rv };
+    });
+    return nb;
+  }
+  function updateBarang(id: string, p: any): void {
+    setData(d => {
+      const old = d.barang.find((b: BarangBukti) => b.id === id);
+      if (!old) return d;
+      const nb: BarangBukti = { ...old, ...p, kode: p.kode.trim(), id: old.id, createdAt: old.createdAt };
+      let rv = d.riwayat;
+      if (old.kode !== nb.kode) rv = rv.map((r: Riwayat) => (r.kodeBB === old.kode ? { ...r, kodeBB: nb.kode } : r));
+      if (!nb.draf) {
+        const now = nowLocal();
+        const petugas = user ? user.nama : 'Sistem';
+        if (old.draf) {
+          rv = [...rv, penerimaanEvent(nb, 'Pendaftaran barang bukti dari draft')];
+        } else if (old.lokasi !== nb.lokasi) {
+          rv = [...rv, { id: uid('rv'), kodeBB: nb.kode, jenis: 'Perpindahan', tanggalWaktu: now, lokasiAsal: old.lokasi, lokasiTujuan: nb.lokasi, petugas, alasan: 'Penyesuaian lokasi melalui formulir edit', catatan: 'Dicatat otomatis oleh sistem (demo).', harapanKembali: '', statusKembali: '' }];
+        } else if (old.status !== nb.status) {
+          rv = [...rv, { id: uid('rv'), kodeBB: nb.kode, jenis: 'Pemeriksaan', tanggalWaktu: now, lokasiAsal: nb.lokasi, lokasiTujuan: nb.lokasi, petugas, alasan: 'Pembaruan status melalui formulir edit', catatan: 'Dicatat otomatis oleh sistem (demo).', harapanKembali: '', statusKembali: '' }];
+        }
+      }
+      return { ...d, barang: d.barang.map((b: BarangBukti) => (b.id === id ? nb : b)), riwayat: rv };
+    });
+  }
+  function deleteBarang(id: string): { ok: boolean; msg?: string } {
+    const b = data.barang.find((x: BarangBukti) => x.id === id);
+    if (!b) return { ok: false, msg: 'Data tidak ditemukan.' };
+    setData(d => ({ ...d, barang: d.barang.filter((x: BarangBukti) => x.id !== id), riwayat: d.riwayat.filter((r: Riwayat) => r.kodeBB !== b.kode) }));
+    return { ok: true };
+  }
+
+  /* ---- riwayat / chain of custody: selalu tambah kejadian baru, tidak pernah menimpa ---- */
+  function addRiwayat(ev: any): void {
+    setData(d => {
+      const rv = [...d.riwayat, { ...ev, id: uid('rv') }];
+      const barang = d.barang.map((b: BarangBukti) => {
+        if (b.kode !== ev.kodeBB || b.draf) return b;
+        let status = b.status, lokasi = b.lokasi;
+        if (ev.jenis === 'Peminjaman') { status = 'Dipinjam'; lokasi = ev.lokasiTujuan || lokasi; }
+        else if (ev.jenis === 'Pengembalian') { status = 'Tersedia'; lokasi = ev.lokasiTujuan || lokasi; }
+        else if (ev.jenis === 'Perpindahan' || ev.jenis === 'Pengalihan' || ev.jenis === 'Penerimaan') { lokasi = ev.lokasiTujuan || lokasi; }
+        return { ...b, status, lokasi };
+      });
+      if (ev.jenis === 'Pengembalian') {
+        for (let i = rv.length - 1; i >= 0; i--) {
+          const r = rv[i];
+          if (r.kodeBB === ev.kodeBB && r.jenis === 'Peminjaman' && r.statusKembali === 'Belum Kembali') {
+            rv[i] = { ...r, statusKembali: 'Sudah Kembali' };
+            break;
+          }
+        }
+      }
+      return { ...d, barang, riwayat: rv };
+    });
+  }
+
+  /* ---- manajemen pengguna (demo) ---- */
+  function addUser(p: any): { ok: boolean; msg?: string } {
+    const u = p.username.trim().toLowerCase();
+    if (data.users.some((x: UserAkun) => x.username.toLowerCase() === u)) return { ok: false, msg: 'Nama pengguna sudah digunakan.' };
+    const nu: UserAkun = { id: uid('usr'), username: p.username.trim(), nama: p.nama.trim(), role: p.role, status: p.status || 'Aktif', aktivitasTerakhir: '-' };
+    setData(d => ({ ...d, users: [...d.users, nu] }));
+    return { ok: true };
+  }
+  function updateUser(id: string, p: any): void {
+    setData(d => ({ ...d, users: d.users.map((x: UserAkun) => (x.id === id ? { ...x, nama: p.nama.trim(), role: p.role, status: p.status } : x)) }));
+  }
+  function setUserStatus(id: string, status: 'Aktif' | 'Nonaktif'): void {
+    setData(d => ({ ...d, users: d.users.map((x: UserAkun) => (x.id === id ? { ...x, status } : x)) }));
+  }
+  function deleteUser(id: string): { ok: boolean; msg?: string } {
+    const u = data.users.find((x: UserAkun) => x.id === id);
+    if (!u) return { ok: false, msg: 'Pengguna tidak ditemukan.' };
+    if (u.username === 'admin') return { ok: false, msg: 'Akun admin demo tidak dapat dihapus.' };
+    if (user && u.id === user.id) return { ok: false, msg: 'Anda tidak dapat menghapus akun yang sedang digunakan.' };
+    setData(d => ({ ...d, users: d.users.filter((x: UserAkun) => x.id !== id) }));
+    return { ok: true };
+  }
+
+  function resetDemo(): void {
+    const s = seedStore();
+    setData(s);
+  }
+  function setNotifSeen(): void {
+    setData(d => ({ ...d, notifSeen: nowLocal() }));
+  }
+
+  const value = {
+    data, user, toasts, toast, dismissToast,
+    login, logout, addPerkara, updatePerkara, deletePerkara,
+    addBarang, updateBarang, deleteBarang, addRiwayat,
+    addUser, updateUser, setUserStatus, deleteUser, resetDemo, setNotifSeen,
+  };
+  return <AppCtx.Provider value={value}>{children}<Toaster /></AppCtx.Provider>;
+}
+
+/* ============================== 6. KOMPONEN UI DASAR ============================== */
+
+/* Ikon Lucide: placeholder <i data-lucide> diganti menjadi SVG oleh lucide.createIcons()
+   melalui penjadwal satu-frame agar tidak memindai DOM berulang kali. */
+let lucideQueued = false;
+function queueLucide(): void {
+  if (lucideQueued) return;
+  lucideQueued = true;
+  requestAnimationFrame(() => {
+    lucideQueued = false;
+    try { if ((window as any).lucide) (window as any).lucide.createIcons(); } catch (e) { /* abaikan */ }
+  });
+}
+function Icon({ name, size = 18, className = '', strokeWidth = 2 }: { name: string; size?: number; className?: string; strokeWidth?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const host = ref.current;
+    if (!host) return;
+    host.innerHTML = '';
+    const ph = document.createElement('i');
+    ph.setAttribute('data-lucide', name);
+    ph.setAttribute('width', String(size));
+    ph.setAttribute('height', String(size));
+    ph.setAttribute('stroke-width', String(strokeWidth));
+    host.appendChild(ph);
+    queueLucide();
+  }, [name, size, strokeWidth]);
+  return <span ref={ref} className={cn('inline-flex shrink-0 items-center justify-center leading-none', className)} />;
+}
+
+function Badge({ children, tone }: { children: React.ReactNode; tone?: string }) {
+  const key = tone || String(children);
+  return (
+    <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset', BADGE_TONE[key] || 'bg-slate-100 text-slate-600 ring-slate-500/20')}>
+      {children}
+    </span>
+  );
+}
+function CondDot({ kondisi }: { kondisi: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-600">
+      <span className={cn('h-1.5 w-1.5 rounded-full', KONDISI_DOT[kondisi] || 'bg-slate-400')} />
+      {kondisi}
+    </span>
+  );
+}
+function Avatar({ nama, size = 'h-8 w-8 text-[10px]' }: { nama: string; size?: string }) {
+  return <span className={cn('grid shrink-0 place-items-center rounded-full bg-navy-800 font-bold text-white', size)}>{initials(nama)}</span>;
+}
+
+function buttonClass(variant = 'primary', size = 'md', className = ''): string {
+  const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50';
+  const sizes: Record<string, string> = { sm: 'px-2.5 py-1.5 text-xs', md: 'px-4 py-2 text-sm' };
+  const variants: Record<string, string> = {
+    primary: 'bg-blue-600 text-white shadow-sm hover:bg-blue-700 active:bg-blue-800',
+    secondary: 'border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-navy-800',
+    ghost: 'text-slate-600 hover:bg-slate-100 hover:text-navy-800',
+    danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
+    navy: 'bg-navy-800 text-white shadow-sm hover:bg-navy-700',
+  };
+  return cn(base, sizes[size], variants[variant], className);
+}
+function Button({ variant = 'primary', size = 'md', icon, iconRight, className = '', children, ...props }: any) {
+  const is = size === 'sm' ? 14 : 16;
+  return (
+    <button className={buttonClass(variant, size, className)} {...props}>
+      {icon && <Icon name={icon} size={is} />}
+      {children}
+      {iconRight && <Icon name={iconRight} size={is} />}
+    </button>
+  );
+}
+function ButtonLink({ to, variant = 'primary', size = 'md', icon, className = '', children }: any) {
+  const is = size === 'sm' ? 14 : 16;
+  return (
+    <a href={'#' + to} className={buttonClass(variant, size, className)}>
+      {icon && <Icon name={icon} size={is} />}
+      {children}
+    </a>
+  );
+}
+function IconBtn({ icon, title, onClick, disabled, tone }: { icon: string; title: string; onClick?: () => void; disabled?: boolean; tone?: 'default' | 'danger' }) {
+  return (
+    <button type="button" title={title} aria-label={title} disabled={disabled} onClick={onClick}
+      className={cn('grid h-8 w-8 place-items-center rounded-md border bg-white transition disabled:cursor-not-allowed disabled:opacity-40',
+        tone === 'danger'
+          ? 'border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+          : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-navy-800')}>
+      <Icon name={icon} size={15} />
+    </button>
+  );
+}
+
+const inputBase = 'w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 transition focus:outline-none focus:ring-2';
+function Input({ error, className = '', ...props }: any) {
+  return <input className={cn(inputBase, error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15' : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/15', 'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400', className)} {...props} />;
+}
+function Textarea({ error, className = '', ...props }: any) {
+  return <textarea rows={3} className={cn(inputBase, error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15' : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/15', className)} {...props} />;
+}
+function Select({ error, options, placeholder, className = '', ...props }: any) {
+  return (
+    <div className={cn('relative', className)}>
+      <select
+        className={cn(inputBase, 'appearance-none py-2 pl-3 pr-9',
+          error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15' : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/15',
+          'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400')}
+        {...props}>
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map(([v, l]: [string, string]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <Icon name="chevron-down" size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+    </div>
+  );
+}
+function SearchInput({ className = '', ...props }: any) {
+  return (
+    <div className={cn('relative', className)}>
+      <Icon name="search" size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <input className={cn(inputBase, 'border-slate-300 py-2 pl-9 pr-3 focus:border-blue-500 focus:ring-blue-500/15')} {...props} />
+    </div>
+  );
+}
+
+function Field({ label, required, error, hint, children, className = '' }: any) {
+  return (
+    <label className={cn('block', className)}>
+      <span className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-600">
+        {label}{required && <span className="text-red-500">*</span>}
+      </span>
+      {children}
+      {hint && !error && <span className="mt-1 block text-[11px] leading-relaxed text-slate-400">{hint}</span>}
+      {error && <span className="mt-1 block text-[11px] font-medium text-red-600">{error}</span>}
+    </label>
+  );
+}
+
+function Card({ title, desc, actions, children, className = '', noPad }: any) {
+  return (
+    <section className={cn('rounded-xl border border-slate-200 bg-white shadow-card', className)}>
+      {(title || actions) && (
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="min-w-0">
+            {title && <h3 className="text-sm font-bold text-navy-800">{title}</h3>}
+            {desc && <p className="mt-0.5 text-xs text-slate-500">{desc}</p>}
+          </div>
+          {actions}
+        </header>
+      )}
+      <div className={noPad ? '' : 'p-5'}>{children}</div>
+    </section>
+  );
+}
+
+function FormSection({ icon, title, desc, children }: any) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white shadow-card">
+      <header className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-50 text-blue-600"><Icon name={icon} size={17} /></span>
+        <div>
+          <h3 className="text-sm font-bold text-navy-800">{title}</h3>
+          <p className="mt-0.5 text-xs text-slate-500">{desc}</p>
+        </div>
+      </header>
+      <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function InfoGrid({ rows }: { rows: { l: string; v: React.ReactNode; wide?: boolean }[] }) {
+  return (
+    <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+      {rows.map((r, i) => (
+        <div key={i} className={r.wide ? 'sm:col-span-2' : ''}>
+          <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{r.l}</dt>
+          <dd className="mt-0.5 break-words text-sm text-slate-700">{r.v || <span className="text-slate-400">—</span>}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function StatCard({ to, icon, tint, label, value, sub }: { to?: string; icon: string; tint: string; label: string; value: React.ReactNode; sub?: string }) {
+  const inner = (
+    <Fragment>
+      <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg', tint)}><Icon name={icon} size={19} /></span>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-slate-500">{label}</p>
+        <p className="mt-0.5 text-2xl font-bold leading-none tabular-nums text-navy-800">{value}</p>
+        {sub && <p className="mt-1.5 truncate text-[11px] text-slate-400">{sub}</p>}
+      </div>
+    </Fragment>
+  );
+  const cls = 'flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card transition';
+  return to
+    ? <a href={'#' + to} className={cn(cls, 'hover:border-blue-300 hover:shadow-md')}>{inner}</a>
+    : <div className={cls}>{inner}</div>;
+}
+
+function Tabs({ tabs, active, onChange }: { tabs: { key: string; label: string; icon?: string }[]; active: string; onChange: (k: string) => void }) {
+  return (
+    <div className="flex gap-1 overflow-x-auto border-b border-slate-200">
+      {tabs.map(t => (
+        <button key={t.key} onClick={() => onChange(t.key)}
+          className={cn('flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition',
+            active === t.key ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700')}>
+          {t.icon && <Icon name={t.icon} size={15} />}
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Pagination({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (p: number) => void }) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (total === 0) return null;
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(total, page * pageSize);
+  const nums: (number | string)[] = [];
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || Math.abs(i - page) <= 1) nums.push(i);
+    else if (nums[nums.length - 1] !== '…') nums.push('…');
+  }
+  return (
+    <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 sm:flex-row">
+      <p className="text-xs text-slate-500">
+        Menampilkan <span className="font-semibold tabular-nums text-slate-700">{from}–{to}</span> dari{' '}
+        <span className="font-semibold tabular-nums text-slate-700">{total}</span> data
+      </p>
+      <div className="flex items-center gap-1">
+        <IconBtn icon="chevron-left" title="Halaman sebelumnya" disabled={page <= 1} onClick={() => onPage(page - 1)} />
+        {nums.map((n, i) => n === '…'
+          ? <span key={'e' + i} className="px-1 text-xs text-slate-400">…</span>
+          : <button key={String(n)} onClick={() => onPage(n as number)}
+              className={cn('h-8 min-w-[32px] rounded-md px-2 text-xs font-semibold tabular-nums transition',
+                n === page ? 'bg-blue-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50')}>
+              {n}
+            </button>)}
+        <IconBtn icon="chevron-right" title="Halaman berikutnya" disabled={page >= pages} onClick={() => onPage(page + 1)} />
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ icon = 'inbox', title, desc, action }: { icon?: string; title: string; desc: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Icon name={icon} size={26} /></div>
+      <h3 className="mt-4 text-sm font-bold text-navy-800">{title}</h3>
+      <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">{desc}</p>
+      {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+
+function Modal({ open, onClose, title, desc, children, footer, width = 'max-w-lg' }: any) {
+  useEffect(() => {
+    if (!open) return;
+    const f = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', f);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', f); document.body.style.overflow = ''; };
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center p-4 sm:items-center">
+      <div className="absolute inset-0 bg-navy-950/50" onClick={onClose} />
+      <div className={cn('anim-fade-up relative flex max-h-[92vh] w-full flex-col rounded-xl bg-white shadow-2xl', width)}>
+        <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+          <div>
+            <h3 className="text-sm font-bold text-navy-800">{title}</h3>
+            {desc && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{desc}</p>}
+          </div>
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Tutup">
+            <Icon name="x" size={17} />
+          </button>
+        </header>
+        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {footer && <footer className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3">{footer}</footer>}
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDialog({ open, onClose, onConfirm, title, children, confirmLabel = 'Hapus', danger = true, confirmDisabled }: any) {
+  return (
+    <Modal open={open} onClose={onClose} title={title} width="max-w-md"
+      footer={<Fragment>
+        <Button variant="secondary" onClick={onClose}>Batal</Button>
+        <Button variant={danger ? 'danger' : 'primary'} disabled={confirmDisabled} onClick={onConfirm}>{confirmLabel}</Button>
+      </Fragment>}>
+      <div className="flex items-start gap-3">
+        <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-full', danger ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600')}>
+          <Icon name={danger ? 'alert-triangle' : 'info'} size={19} />
+        </span>
+        <div className="text-sm leading-relaxed text-slate-600">{children}</div>
+      </div>
+    </Modal>
+  );
+}
+
+function Toaster() {
+  const { toasts, dismissToast } = useApp();
+  const meta: Record<string, { icon: string; cls: string }> = {
+    success: { icon: 'check', cls: 'border-emerald-500 text-emerald-600' },
+    error: { icon: 'alert-triangle', cls: 'border-red-500 text-red-600' },
+    info: { icon: 'info', cls: 'border-blue-500 text-blue-600' },
+  };
+  return (
+    <div className="no-print fixed right-4 top-4 z-[100] flex w-[340px] max-w-[calc(100vw-2rem)] flex-col gap-2">
+      {toasts.map(t => {
+        const m = meta[t.type] || meta.info;
+        return (
+          <div key={t.id} className={cn('anim-toast flex items-start gap-3 rounded-lg border border-slate-200 border-l-4 bg-white p-3 shadow-lg', m.cls)}>
+            <Icon name={m.icon} size={17} className="mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-navy-800">{t.title}</p>
+              {t.message && <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{t.message}</p>}
+            </div>
+            <button onClick={() => dismissToast(t.id)} className="text-slate-300 transition hover:text-slate-500" aria-label="Tutup notifikasi">
+              <Icon name="x" size={14} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DemoNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-400">
+      <Icon name="info" size={13} className="mt-px shrink-0" />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+function PrintHeader({ subtitle }: { subtitle: string }) {
+  return (
+    <div className="print-only mb-4 border-b-2 border-navy-800 pb-3 text-center">
+      <p className="text-sm font-bold tracking-wide text-navy-800">KEPOLISIAN NEGARA REPUBLIK INDONESIA</p>
+      <p className="text-sm font-semibold text-navy-800">POLDA SULAWESI UTARA</p>
+      <p className="text-xs text-navy-800">DIREKTORAT RESERSE KRIMINAL SPESIAL — SUBBID SIBER</p>
+      <p className="mt-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">{subtitle}</p>
+    </div>
+  );
+}
+
+/* Garis waktu kejadian barang bukti (chain of custody) — dipakai dashboard, detail, dan halaman riwayat */
+function Timeline({ items, showKode = true }: { items: Riwayat[]; showKode?: boolean }) {
+  const { data } = useApp();
+  if (!items.length) return <p className="py-8 text-center text-xs text-slate-400">Belum ada kejadian tercatat.</p>;
+  const idOf = (kode: string) => { const b = data.barang.find((x: BarangBukti) => x.kode === kode); return b ? b.id : ''; };
+  return (
+    <ol>
+      {items.map((r, i) => {
+        const m = JENIS_META[r.jenis] || JENIS_META.Perpindahan;
+        const last = i === items.length - 1;
+        const bid = idOf(r.kodeBB);
+        return (
+          <li key={r.id} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-full ring-1 ring-inset', m.dot)}>
+                <Icon name={m.icon} size={14} />
+              </span>
+              {!last && <span className="my-1 w-px flex-1 bg-slate-200" />}
+            </div>
+            <div className={cn('min-w-0 flex-1 pb-5', last && 'pb-1')}>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset', m.badge)}>
+                  <Icon name={m.icon} size={11} />{r.jenis}
+                </span>
+                {showKode && bid && <a href={'#/barang-bukti/' + bid} className="text-xs font-bold text-navy-800 hover:text-blue-700">{r.kodeBB}</a>}
+                {showKode && !bid && <span className="text-xs font-bold text-navy-800">{r.kodeBB}</span>}
+                <span className="text-[11px] tabular-nums text-slate-400">{fmtDateTime(r.tanggalWaktu)}</span>
+              </div>
+              <p className="mt-1.5 flex flex-wrap items-center gap-1 text-xs text-slate-600">
+                <span className="truncate">{r.lokasiAsal}</span>
+                <Icon name="arrow-right" size={12} className="shrink-0 text-slate-400" />
+                <span className="truncate font-medium text-navy-800">{r.lokasiTujuan}</span>
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-500">Petugas: {r.petugas} · {r.alasan}</p>
+              {r.catatan && <p className="mt-1.5 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-slate-500">{r.catatan}</p>}
+              {r.jenis === 'Peminjaman' && r.harapanKembali && (
+                <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                  <span>Harap kembali: <span className="font-semibold text-slate-700">{fmtDate(r.harapanKembali)}</span></span>
+                  {r.statusKembali && <Badge tone={r.statusKembali}>{r.statusKembali}</Badge>}
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/* ============================== 7. ROUTER HASH ============================== */
+
+function useHash(): string {
+  const [hash, setHash] = useState<string>(() => window.location.hash || '#/');
+  useEffect(() => {
+    const f = () => setHash(window.location.hash || '#/');
+    window.addEventListener('hashchange', f);
+    return () => window.removeEventListener('hashchange', f);
+  }, []);
+  return hash;
+}
+function Redirect({ to }: { to: string }) {
+  useEffect(() => { window.location.hash = to; }, [to]);
+  return null;
+}
+
+/* ============================== 8. KERANGKA: SIDEBAR, HEADER, APPSHELL ============================== */
+
+function SidebarContent({ collapsed, onToggleCollapse, onNavigate, mobile }: any) {
+  const { user, logout } = useApp();
+  const hash = useHash();
+  const path = (hash.replace(/^#/, '') || '/').split('?')[0];
+  const nav: { to: string; label: string; icon: string }[] = [
+    { to: '/dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+    { to: '/perkara', label: 'Data Perkara', icon: 'folder-open' },
+    { to: '/barang-bukti', label: 'Data Barang Bukti', icon: 'archive' },
+    { to: '/riwayat', label: 'Riwayat Perpindahan', icon: 'history' },
+    { to: '/laporan', label: 'Laporan', icon: 'clipboard-list' },
+  ];
+  if (user && user.role === 'Administrator') nav.push({ to: '/pengguna', label: 'Manajemen Pengguna', icon: 'users' });
+  nav.push({ to: '/pengaturan', label: 'Pengaturan', icon: 'settings' });
+  const isActive = (to: string) => path === to || path.startsWith(to + '/') || (to === '/dashboard' && path === '/');
+
+  return (
+    <div className="flex h-full flex-col bg-navy-800 text-slate-300">
+      <div className={cn('flex items-center gap-3 border-b border-white/10', collapsed ? 'justify-center px-2 py-4' : 'px-5 py-4')}>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-600 text-white shadow-sm">
+          <Icon name="shield" size={20} />
+        </span>
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold tracking-wide text-white">SIBER EVIDENCE</p>
+            <p className="text-[10px] leading-tight text-slate-400">Sistem Pengelolaan Barang Bukti<br />Subbid Siber · Polda Sulawesi Utara</p>
+          </div>
+        )}
+        {mobile && (
+          <button className="text-slate-400 transition hover:text-white" onClick={onNavigate} aria-label="Tutup menu">
+            <Icon name="x" size={18} />
+          </button>
+        )}
+      </div>
+
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        {nav.map(n => (
+          <a key={n.to} href={'#' + n.to} title={collapsed ? n.label : undefined} onClick={onNavigate}
+            className={cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition',
+              collapsed && 'justify-center px-0',
+              isActive(n.to) ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-white/5 hover:text-white')}>
+            <Icon name={n.icon} size={18} />
+            {!collapsed && <span className="truncate">{n.label}</span>}
+          </a>
+        ))}
+      </nav>
+
+      <div className="border-t border-white/10 p-3">
+        {!collapsed && user && (
+          <div className="mb-2 flex items-center gap-2.5 rounded-lg bg-white/5 px-3 py-2.5">
+            <Avatar nama={user.nama} size="h-8 w-8 text-[10px]" />
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-white">{user.nama}</p>
+              <p className="truncate text-[10px] text-slate-400">{user.role} · {user.username}</p>
+            </div>
+          </div>
+        )}
+        <button onClick={() => { logout(); }}
+          className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-300 transition hover:bg-red-500/10 hover:text-red-300',
+            collapsed && 'justify-center px-0')}>
+          <Icon name="log-out" size={18} />
+          {!collapsed && 'Keluar'}
+        </button>
+        {!mobile && (
+          <button onClick={onToggleCollapse}
+            className="mt-1 hidden w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-400 transition hover:bg-white/5 hover:text-white lg:flex">
+            <Icon name={collapsed ? 'chevrons-right' : 'chevrons-left'} size={18} />
+            {!collapsed && 'Ringkas Sidebar'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Header({ title, crumbs, onMenu }: { title: string; crumbs: { label: string; to?: string }[]; onMenu: () => void }) {
+  const { data, user, logout, toast, setNotifSeen } = useApp();
+  const [openN, setOpenN] = useState(false);
+  const [openP, setOpenP] = useState(false);
+  const rv = useMemo(() => [...data.riwayat].sort((a: Riwayat, b: Riwayat) => b.tanggalWaktu.localeCompare(a.tanggalWaktu)), [data.riwayat]);
+  const unread = rv.filter((r: Riwayat) => !data.notifSeen || r.tanggalWaktu > data.notifSeen).length;
+
+  return (
+    <header className="no-print sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <button onClick={onMenu} className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-navy-800 lg:hidden" aria-label="Buka menu">
+          <Icon name="menu" size={19} />
+        </button>
+        <div className="min-w-0 flex-1">
+          <nav className="flex items-center gap-1 text-[11px] text-slate-400">
+            {crumbs.map((c, i) => (
+              <Fragment key={i}>
+                {i > 0 && <Icon name="chevron-right" size={11} className="shrink-0 text-slate-300" />}
+                {c.to && i < crumbs.length - 1
+                  ? <a href={'#' + c.to} className="truncate hover:text-blue-600">{c.label}</a>
+                  : <span className={cn('truncate', i === crumbs.length - 1 && 'font-medium text-slate-600')}>{c.label}</span>}
+              </Fragment>
+            ))}
+          </nav>
+          <h1 className="truncate text-lg font-bold leading-tight text-navy-800">{title}</h1>
+        </div>
+
+        {/* Notifikasi */}
+        <div className="relative">
+          <button onClick={() => { setOpenN(v => !v); setOpenP(false); }}
+            className="relative grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-navy-800" aria-label="Notifikasi">
+            <Icon name="bell" size={18} />
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
+          </button>
+          {openN && (
+            <Fragment>
+              <div className="fixed inset-0 z-40" onClick={() => setOpenN(false)} />
+              <div className="anim-fade-up absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                  <p className="text-sm font-bold text-navy-800">Notifikasi Aktivitas</p>
+                  <button className="text-[11px] font-semibold text-blue-600 hover:underline" onClick={() => { setNotifSeen(); }}>Tandai dibaca</button>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {rv.slice(0, 6).map((r: Riwayat) => {
+                    const m = JENIS_META[r.jenis] || JENIS_META.Perpindahan;
+                    return (
+                      <a key={r.id} href="#/riwayat" onClick={() => setOpenN(false)} className="flex gap-3 border-b border-slate-50 px-4 py-3 transition last:border-0 hover:bg-slate-50">
+                        <span className={cn('mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ring-1 ring-inset', m.dot)}>
+                          <Icon name={m.icon} size={14} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-semibold text-navy-800">{r.jenis} — {r.kodeBB}</span>
+                          <span className="mt-0.5 block truncate text-[11px] text-slate-500">{r.petugas} · {fmtDateTime(r.tanggalWaktu)}</span>
+                        </span>
+                      </a>
+                    );
+                  })}
+                  {rv.length === 0 && <p className="px-4 py-8 text-center text-xs text-slate-400">Belum ada aktivitas tercatat.</p>}
+                </div>
+                <a href="#/riwayat" onClick={() => setOpenN(false)} className="block border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 text-center text-[11px] font-semibold text-blue-600 hover:bg-slate-50">
+                  Lihat semua riwayat perpindahan
+                </a>
+              </div>
+            </Fragment>
+          )}
+        </div>
+
+        <span className="hidden h-6 w-px bg-slate-200 sm:block" />
+
+        {/* Profil */}
+        <div className="relative">
+          <button onClick={() => { setOpenP(v => !v); setOpenN(false); }} className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-2 transition hover:bg-slate-100" aria-label="Menu profil">
+            <Avatar nama={user.nama} size="h-8 w-8 text-[10px]" />
+            <span className="hidden text-left sm:block">
+              <span className="block max-w-[150px] truncate text-xs font-bold text-navy-800">{user.nama}</span>
+              <span className="block text-[10px] text-slate-500">{user.role}</span>
+            </span>
+            <Icon name="chevron-down" size={14} className="text-slate-400" />
+          </button>
+          {openP && (
+            <Fragment>
+              <div className="fixed inset-0 z-40" onClick={() => setOpenP(false)} />
+              <div className="anim-fade-up absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <Avatar nama={user.nama} size="h-10 w-10 text-xs" />
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-navy-800">{user.nama}</p>
+                    <p className="truncate text-[11px] text-slate-500">@{user.username}</p>
+                    <div className="mt-1"><Badge>{user.role}</Badge></div>
+                  </div>
+                </div>
+                <div className="border-t border-slate-100 p-1.5">
+                  <a href="#/pengaturan" onClick={() => setOpenP(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-navy-800">
+                    <Icon name="settings" size={15} />Pengaturan
+                  </a>
+                  <button onClick={() => { setOpenP(false); logout(); toast('info', 'Anda telah keluar', 'Sesi demo diakhiri. Sampai jumpa kembali!'); }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50">
+                    <Icon name="log-out" size={15} />Keluar
+                  </button>
+                </div>
+              </div>
+            </Fragment>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function NotFound({ message }: { message?: string }) {
+  return (
+    <div className="grid place-items-center py-20 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Icon name="search-x" size={26} /></div>
+      <h2 className="mt-4 text-lg font-bold text-navy-800">Halaman tidak ditemukan</h2>
+      <p className="mt-1 max-w-md text-sm text-slate-500">{message || 'Tautan yang Anda buka tidak tersedia pada aplikasi demo ini.'}</p>
+      <ButtonLink to="/dashboard" icon="arrow-left" className="mt-5">Kembali ke Dashboard</ButtonLink>
+    </div>
+  );
+}
+
+function NoAccess() {
+  return (
+    <div className="grid place-items-center py-20 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-2xl bg-red-50 text-red-500"><Icon name="lock" size={26} /></div>
+      <h2 className="mt-4 text-lg font-bold text-navy-800">Akses ditolak</h2>
+      <p className="mt-1 max-w-md text-sm text-slate-500">
+        Halaman ini hanya dapat diakses oleh Administrator. Perhatikan bahwa pengaturan peran pada demo ini hanya memengaruhi tampilan antarmuka — pengamanan akses sesungguhnya memerlukan implementasi backend.
+      </p>
+      <ButtonLink to="/dashboard" icon="arrow-left" className="mt-5">Kembali ke Dashboard</ButtonLink>
+    </div>
+  );
+}
+
+function AppShell({ path }: { path: string }) {
+  const { data, user } = useApp();
+  const [pathRaw, qs] = path.split('?');
+  const query = new URLSearchParams(qs || '');
+  const seg = pathRaw.split('/').filter(Boolean);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('se_sidebar') === '1');
+  const [drawer, setDrawer] = useState(false);
+
+  const toggleCollapsed = () => setCollapsed((c: boolean) => {
+    localStorage.setItem('se_sidebar', c ? '0' : '1');
+    return !c;
+  });
+
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [pathRaw]);
+
+  /* Judul & breadcrumb per rute */
+  let title = 'Dashboard';
+  let crumbs: { label: string; to?: string }[] = [{ label: 'Beranda', to: '/dashboard' }];
+  const k = seg[0] || 'dashboard';
+  if (k === 'dashboard') { title = 'Dashboard'; }
+  else if (k === 'perkara') {
+    title = 'Data Perkara'; crumbs.push({ label: 'Data Perkara', to: '/perkara' });
+    if (seg[1]) {
+      const p = data.perkara.find((x: Perkara) => x.id === seg[1]);
+      title = 'Detail Perkara';
+      crumbs.push({ label: p ? p.nomorLP : 'Detail Perkara' });
+    }
+  } else if (k === 'barang-bukti') {
+    crumbs.push({ label: 'Data Barang Bukti', to: '/barang-bukti' });
+    if (!seg[1]) { title = 'Data Barang Bukti'; }
+    else if (seg[1] === 'baru') { title = 'Tambah Barang Bukti'; crumbs.push({ label: 'Tambah' }); }
+    else {
+      const b = data.barang.find((x: BarangBukti) => x.id === seg[1]);
+      if (seg[2] === 'edit') { title = 'Edit Barang Bukti'; crumbs.push({ label: b ? b.kode : seg[1], to: '/barang-bukti/' + seg[1] }); crumbs.push({ label: 'Edit' }); }
+      else { title = 'Detail Barang Bukti'; crumbs.push({ label: b ? b.kode : seg[1] }); }
+    }
+  } else if (k === 'riwayat') { title = 'Riwayat Perpindahan'; crumbs.push({ label: 'Riwayat Perpindahan' }); }
+  else if (k === 'laporan') { title = 'Laporan'; crumbs.push({ label: 'Laporan' }); }
+  else if (k === 'pengguna') { title = 'Manajemen Pengguna'; crumbs.push({ label: 'Manajemen Pengguna' }); }
+  else if (k === 'pengaturan') { title = 'Pengaturan'; crumbs.push({ label: 'Pengaturan' }); }
+  else { title = 'Halaman Tidak Ditemukan'; }
+
+  useEffect(() => { document.title = title + ' — SIBER EVIDENCE'; }, [title]);
+
+  const admin = user.role === 'Administrator';
+  let page: React.ReactNode;
+  if (k === 'dashboard') page = <DashboardPage />;
+  else if (k === 'perkara') page = seg[1] ? <PerkaraDetailPage id={seg[1]} key={'pkd-' + seg[1]} /> : <PerkaraPage />;
+  else if (k === 'barang-bukti') {
+    if (!seg[1]) page = <BarangBuktiPage query={query} />;
+    else if (seg[1] === 'baru') page = <BarangFormPage query={query} key="bb-baru" />;
+    else if (seg[2] === 'edit') page = <BarangFormPage id={seg[1]} query={query} key={'bb-edit-' + seg[1]} />;
+    else page = <BarangDetailPage id={seg[1]} query={query} key={'bbd-' + seg[1]} />;
+  }
+  else if (k === 'riwayat') page = <RiwayatPage query={query} />;
+  else if (k === 'laporan') page = <LaporanPage />;
+  else if (k === 'pengguna') page = admin ? <PenggunaPage /> : <NoAccess />;
+  else if (k === 'pengaturan') page = <PengaturanPage />;
+  else page = <NotFound />;
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      <aside className={cn('no-print fixed inset-y-0 left-0 z-40 hidden lg:block transition-all duration-200', collapsed ? 'w-[76px]' : 'w-64')}>
+        <SidebarContent collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
+      </aside>
+
+      {drawer && (
+        <div className="no-print fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-navy-950/60" onClick={() => setDrawer(false)} />
+          <aside className="anim-slide absolute inset-y-0 left-0 w-72">
+            <SidebarContent mobile collapsed={false} onToggleCollapse={toggleCollapsed} onNavigate={() => setDrawer(false)} />
+          </aside>
+        </div>
+      )}
+
+      <div className={cn('app-offset flex min-h-screen flex-col transition-[padding] duration-200', collapsed ? 'lg:pl-[76px]' : 'lg:pl-64')}>
+        <Header title={title} crumbs={crumbs} onMenu={() => setDrawer(true)} />
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{page}</main>
+        <footer className="no-print border-t border-slate-200 px-6 py-4">
+          <p className="text-center text-[11px] leading-relaxed text-slate-400">
+            SIBER EVIDENCE v1.0 — Demo Kerja Praktik · Subbid Siber, Ditreskrimsus Polda Sulawesi Utara<br />
+            Seluruh data bersifat contoh/fiktif dan tersimpan lokal di peramban Anda. Tidak terhubung ke sistem produksi Kepolisian.
+          </p>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== 9. HALAMAN ============================== */
+
+/* ---------- Login ---------- */
+function LoginPage() {
+  const { login, toast } = useApp();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [err, setErr] = useState('');
+
+  function doLogin(u: string, p: string, rem: boolean) {
+    const r = login(u, p, rem);
+    if (r.ok) {
+      window.location.hash = '#/dashboard';
+      toast('success', 'Login berhasil', 'Selamat datang, ' + r.nama + ' (sesi demo).');
+    } else {
+      setErr(r.msg || 'Login gagal.');
+    }
+  }
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr('');
+    if (!username.trim() || !password) { setErr('Nama pengguna dan kata sandi wajib diisi.'); return; }
+    doLogin(username.trim(), password, remember);
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="mb-6 flex items-center gap-3">
+        <span className="grid h-12 w-12 place-items-center rounded-xl bg-navy-800 text-white shadow-card">
+          <Icon name="shield" size={24} />
+        </span>
+        <div>
+          <p className="text-lg font-extrabold tracking-wide text-navy-800">SIBER EVIDENCE</p>
+          <p className="text-xs text-slate-500">Sistem Pengelolaan Barang Bukti</p>
+        </div>
+      </div>
+
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:p-8">
+        <h1 className="text-base font-bold text-navy-800">Masuk ke Aplikasi</h1>
+        <p className="mt-0.5 text-xs text-slate-500">Subbid Siber — Ditreskrimsus Polda Sulawesi Utara</p>
+
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <Field label="Nama Pengguna" required>
+            <div className="relative">
+              <Icon name="user" size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={username} onChange={(e: any) => setUsername(e.target.value)} placeholder="cth. admin"
+                className={cn(inputBase, 'border-slate-300 py-2 pl-9 pr-3 focus:border-blue-500 focus:ring-blue-500/15')} autoComplete="username" />
+            </div>
+          </Field>
+          <Field label="Kata Sandi" required>
+            <div className="relative">
+              <Icon name="lock" size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type={show ? 'text' : 'password'} value={password} onChange={(e: any) => setPassword(e.target.value)} placeholder="••••••••"
+                className={cn(inputBase, 'border-slate-300 py-2 pl-9 pr-10 focus:border-blue-500 focus:ring-blue-500/15')} autoComplete="current-password" />
+              <button type="button" onClick={() => setShow(s => !s)}
+                className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label={show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>
+                <Icon name={show ? 'eye-off' : 'eye'} size={15} />
+              </button>
+            </div>
+          </Field>
+
+          {err && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-medium text-red-700">
+              <Icon name="alert-triangle" size={14} className="mt-0.5 shrink-0" />
+              {err}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+              <input type="checkbox" checked={remember} onChange={(e: any) => setRemember(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+              Ingat saya di perangkat ini
+            </label>
+            <button type="button" onClick={() => toast('info', 'Lupa kata sandi', 'Pada aplikasi nyata, hubungi administrator sistem. (demo)')}
+              className="text-xs font-semibold text-blue-600 hover:underline">Lupa kata sandi?</button>
+          </div>
+
+          <Button type="submit" icon="shield" className="w-full">Masuk</Button>
+        </form>
+
+        <div className="my-5 flex items-center gap-3">
+          <span className="h-px flex-1 bg-slate-200" />
+          <span className="text-[11px] font-medium text-slate-400">atau</span>
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <Button variant="secondary" icon="graduation-cap" className="w-full"
+          onClick={() => doLogin('admin', 'demo123', true)}>
+          Masuk sebagai Demo (Untuk Acara Akademik)
+        </Button>
+
+        <div className="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-500">
+          <span className="font-semibold text-slate-600">Akun demo:</span> admin / demo123 (Administrator) — b.setiawan / demo123 (Petugas).
+        </div>
+
+        <p className="mt-5 border-t border-slate-100 pt-4 text-[11px] leading-relaxed text-slate-400">
+          Untuk penggunaan internal. Aplikasi demonstrasi akademik (Kerja Praktik) — tidak terhubung ke sistem produksi
+          maupun basis data Kepolisian Negara Republik Indonesia. Seluruh data bersifat fiktif.
+        </p>
+      </div>
+
+      <p className="mt-6 text-[11px] text-slate-400">© 2025 — Kerja Praktik Subbid Siber Ditreskrimsus Polda Sulawesi Utara</p>
+    </div>
+  );
+}
+
+/* ---------- Modal form perkara (dipakai di Dashboard & Data Perkara) ---------- */
+function PerkaraFormModal({ open, initial, onClose }: { open: boolean; initial: Perkara | null; onClose: () => void }) {
+  const { data, addPerkara, updatePerkara, toast } = useApp();
+  const blank = { nomorLP: '', tanggalLaporan: todayISO(), uraian: '', tahap: 'Lidik', penyidik: '' };
+  const [f, setF] = useState<any>(blank);
+  const [errs, setErrs] = useState<any>({});
+  useEffect(() => {
+    if (open) {
+      setF(initial
+        ? { nomorLP: initial.nomorLP, tanggalLaporan: initial.tanggalLaporan, uraian: initial.uraian, tahap: initial.tahap, penyidik: initial.penyidik }
+        : { ...blank, tanggalLaporan: todayISO() });
+      setErrs({});
+    }
+  }, [open, initial]);
+  const set = (key: string, v: string) => setF((o: any) => ({ ...o, [key]: v }));
+  const petugasOpts = data.users.filter((u: UserAkun) => u.status === 'Aktif').map((u: UserAkun) => [u.nama, u.nama] as [string, string]);
+
+  function submit() {
+    const e: any = {};
+    if (!f.nomorLP.trim()) e.nomorLP = 'Nomor LP wajib diisi.';
+    else if (data.perkara.some((p: Perkara) => p.nomorLP.toLowerCase() === f.nomorLP.trim().toLowerCase() && (!initial || p.id !== initial.id)))
+      e.nomorLP = 'Nomor LP sudah terdaftar.';
+    if (!f.tanggalLaporan) e.tanggalLaporan = 'Tanggal laporan wajib diisi.';
+    if (!f.uraian.trim()) e.uraian = 'Uraian singkat perkara wajib diisi.';
+    if (!f.tahap) e.tahap = 'Pilih tahap penanganan.';
+    if (!f.penyidik) e.penyidik = 'Pilih penyidik/petugas.';
+    setErrs(e);
+    if (Object.keys(e).length) { toast('error', 'Formulir belum lengkap', 'Periksa kembali isian yang ditandai merah.'); return; }
+    if (initial) { updatePerkara(initial.id, f); toast('success', 'Perkara diperbarui', f.nomorLP + ' berhasil disimpan (demo).'); }
+    else { addPerkara(f); toast('success', 'Perkara ditambahkan', f.nomorLP + ' tercatat pada data demo.'); }
+    onClose();
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} width="max-w-xl"
+      title={initial ? 'Edit Data Perkara' : 'Tambah Data Perkara'}
+      desc={initial ? 'Perbarui informasi perkara pada data demo.' : 'Catat perkara baru sebelum mendaftarkan barang bukti terkait.'}
+      footer={<Fragment>
+        <Button variant="secondary" onClick={onClose}>Batal</Button>
+        <Button icon="check" onClick={submit}>{initial ? 'Simpan Perubahan' : 'Simpan Perkara'}</Button>
+      </Fragment>}>
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nomor Laporan Polisi" required error={errs.nomorLP}>
+            <Input value={f.nomorLP} error={errs.nomorLP} onChange={(e: any) => set('nomorLP', e.target.value)} placeholder="LP/000/roman/tahun/Ditreskrimsus" />
+          </Field>
+          <Field label="Tanggal Laporan" required error={errs.tanggalLaporan}>
+            <Input type="date" value={f.tanggalLaporan} error={errs.tanggalLaporan} onChange={(e: any) => set('tanggalLaporan', e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Uraian Singkat Perkara" required error={errs.uraian}>
+          <Textarea value={f.uraian} error={errs.uraian} onChange={(e: any) => set('uraian', e.target.value)} placeholder="Ringkas modus, waktu, dan lokasi kejadian (gunakan data fiktif)…" />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Tahap Penanganan" required error={errs.tahap}>
+            <Select value={f.tahap} error={errs.tahap} onChange={(e: any) => set('tahap', e.target.value)} options={[['Lidik', 'Lidik'], ['Sidik', 'Sidik']]} />
+          </Field>
+          <Field label="Penyidik / Petugas" required error={errs.penyidik}>
+            <Select value={f.penyidik} error={errs.penyidik} placeholder="Pilih penyidik…" onChange={(e: any) => set('penyidik', e.target.value)} options={petugasOpts} />
+          </Field>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------- Dashboard ---------- */
+function DashboardPage() {
+  const { data, user, toast } = useApp();
+  const { barang, perkara, riwayat } = data;
+  const [perOpen, setPerOpen] = useState(false);
+  const [banner, setBanner] = useState(() => localStorage.getItem('se_demo_banner') !== '1');
+
+  const active = barang.filter((b: BarangBukti) => !b.draf);
+  const tersedia = active.filter((b: BarangBukti) => b.status === 'Tersedia').length;
+  const dipinjam = active.filter((b: BarangBukti) => b.status === 'Dipinjam').length;
+  const pemeriksaan = active.filter((b: BarangBukti) => b.status === 'Dalam Pemeriksaan').length;
+  const dihancurkan = active.filter((b: BarangBukti) => b.status === 'Dihancurkan').length;
+  const drafCount = barang.filter((b: BarangBukti) => b.draf).length;
+  const lidik = perkara.filter((p: Perkara) => p.tahap === 'Lidik');
+  const sidik = perkara.filter((p: Perkara) => p.tahap === 'Sidik');
+  const bbOfTahap = (t: string) => active.filter((b: BarangBukti) => {
+    const p = perkara.find((x: Perkara) => x.nomorLP === b.nomorLP);
+    return p && p.tahap === t;
+  }).length;
+
+  const recentBB = useMemo(() => [...active].sort((a: BarangBukti, b: BarangBukti) =>
+    b.tanggalPenerimaan.localeCompare(a.tanggalPenerimaan) || b.createdAt.localeCompare(a.createdAt)).slice(0, 5), [barang]);
+  const recentRv = useMemo(() => [...riwayat].sort((a: Riwayat, b: Riwayat) => b.tanggalWaktu.localeCompare(a.tanggalWaktu)).slice(0, 5), [riwayat]);
+
+  return (
+    <div className="space-y-6">
+      {banner && (
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <Icon name="alert-triangle" size={18} className="mt-0.5 shrink-0 text-amber-600" />
+            <p className="text-xs leading-relaxed text-amber-800">
+              <span className="font-bold">Mode demonstrasi akademik (Kerja Praktik).</span> Seluruh data bersifat fiktif untuk
+              keperluan pengujian antarmuka dan tidak merepresentasikan data operasional Kepolisian. Aplikasi tidak terhubung ke sistem produksi mana pun.
+            </p>
+          </div>
+          <button onClick={() => { localStorage.setItem('se_demo_banner', '1'); setBanner(false); }} className="text-amber-500 transition hover:text-amber-700" aria-label="Tutup">
+            <Icon name="x" size={15} />
+          </button>
+        </div>
+      )}
+
+      <div>
+        <h2 className="text-xl font-bold text-navy-800">Selamat datang, {user.nama}</h2>
+        <p className="mt-0.5 text-sm text-slate-500">Ringkasan pengelolaan barang bukti — Subbid Siber, Ditreskrimsus Polda Sulawesi Utara.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard to="/barang-bukti" icon="archive" tint="bg-blue-50 text-blue-600" label="Total Barang Bukti" value={active.length}
+          sub={`${drafCount} draft tersimpan`} />
+        <StatCard to="/perkara" icon="briefcase" tint="bg-navy-50 text-navy-700" label="Total Perkara" value={perkara.length}
+          sub={`Lidik ${lidik.length} · Sidik ${sidik.length}`} />
+        <StatCard to="/barang-bukti?status=Tersedia" icon="check" tint="bg-emerald-50 text-emerald-600" label="Barang Bukti Tersedia" value={tersedia}
+          sub={`${active.length ? Math.round((tersedia / active.length) * 100) : 0}% dari total`} />
+        <StatCard to="/barang-bukti?status=Dipinjam" icon="arrow-up-right" tint="bg-amber-50 text-amber-600" label="Sedang Dipinjam" value={dipinjam}
+          sub="termasuk pinjaman tim forensik" />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Card noPad className="lg:col-span-2" title="Barang Bukti Terbaru" desc="Lima pendaftaran barang bukti terakhir."
+          actions={<a href="#/barang-bukti" className="text-xs font-semibold text-blue-600 hover:underline">Lihat semua</a>}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 font-semibold">Kode</th>
+                  <th className="px-4 py-3 font-semibold">Nama Barang Bukti</th>
+                  <th className="px-4 py-3 font-semibold">Kategori</th>
+                  <th className="px-4 py-3 font-semibold">Diterima</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recentBB.map((b: BarangBukti) => (
+                  <tr key={b.id} className="transition hover:bg-slate-50/70">
+                    <td className="whitespace-nowrap px-5 py-3"><a href={'#/barang-bukti/' + b.id} className="text-xs font-bold text-navy-800 hover:text-blue-700">{b.kode}</a></td>
+                    <td className="max-w-[220px] truncate px-4 py-3 text-slate-700" title={b.nama}>{b.nama}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">{b.kategori}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-slate-500">{fmtDate(b.tanggalPenerimaan)}</td>
+                    <td className="px-4 py-3"><Badge>{b.status}</Badge></td>
+                    <td className="px-5 py-3 text-right">
+                      <IconBtn icon="eye" title="Lihat detail" onClick={() => { window.location.hash = '#/barang-bukti/' + b.id; }} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <div className="space-y-5">
+          <Card title="Aksi Cepat" desc="Mulai alur pencatatan baru.">
+            <div className="space-y-2.5">
+              <button onClick={() => setPerOpen(true)} className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50/40">
+                <span className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-blue-600"><Icon name="folder-open" size={17} /></span>
+                  <span><span className="block text-xs font-bold text-navy-800">Tambah Perkara</span><span className="block text-[11px] text-slate-500">Catat LP baru</span></span>
+                </span>
+                <Icon name="chevron-right" size={15} className="text-slate-400" />
+              </button>
+              <a href="#/barang-bukti/baru" className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3 transition hover:border-blue-300 hover:bg-blue-50/40">
+                <span className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-50 text-emerald-600"><Icon name="package" size={17} /></span>
+                  <span><span className="block text-xs font-bold text-navy-800">Daftarkan Barang Bukti</span><span className="block text-[11px] text-slate-500">Formulir pendaftaran</span></span>
+                </span>
+                <Icon name="chevron-right" size={15} className="text-slate-400" />
+              </a>
+              <a href="#/laporan" className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3 transition hover:border-blue-300 hover:bg-blue-50/40">
+                <span className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-navy-50 text-navy-700"><Icon name="clipboard-list" size={17} /></span>
+                  <span><span className="block text-xs font-bold text-navy-800">Buat Laporan</span><span className="block text-[11px] text-slate-500">Rekap & ekspor</span></span>
+                </span>
+                <Icon name="chevron-right" size={15} className="text-slate-400" />
+              </a>
+            </div>
+          </Card>
+
+          <Card title="Ringkasan Perkara" desc="Sebaran tahap penanganan.">
+            <div className="space-y-4">
+              {[
+                { label: 'Lidik', list: lidik, tone: 'bg-sky-500' },
+                { label: 'Sidik', list: sidik, tone: 'bg-indigo-500' },
+              ].map(g => {
+                const pct = perkara.length ? Math.round((g.list.length / perkara.length) * 100) : 0;
+                return (
+                  <div key={g.label}>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-600">{g.label}</span>
+                      <span className="font-bold tabular-nums text-navy-800">{g.list.length} perkara</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-slate-100">
+                      <div className={cn('h-1.5 rounded-full', g.tone)} style={{ width: pct + '%' }} />
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">{bbOfTahap(g.label)} barang bukti terkait · {pct}% dari total</p>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Card className="lg:col-span-2" title="Aktivitas Terakhir" desc="Pergerakan barang bukti yang tercatat."
+          actions={<a href="#/riwayat" className="text-xs font-semibold text-blue-600 hover:underline">Lihat semua riwayat</a>}>
+          <Timeline items={recentRv} />
+        </Card>
+        <Card title="Status Barang Bukti" desc="Kondisi penyimpanan saat ini.">
+          <ul className="space-y-3">
+            {[
+              { l: 'Tersedia', v: tersedia, d: 'bg-emerald-500' },
+              { l: 'Dipinjam', v: dipinjam, d: 'bg-amber-500' },
+              { l: 'Dalam Pemeriksaan', v: pemeriksaan, d: 'bg-blue-500' },
+              { l: 'Dihancurkan', v: dihancurkan, d: 'bg-red-500' },
+            ].map(s => (
+              <li key={s.l} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2.5">
+                <span className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                  <span className={cn('h-2 w-2 rounded-full', s.d)} />{s.l}
+                </span>
+                <span className="text-sm font-bold tabular-nums text-navy-800">{s.v}</span>
+              </li>
+            ))}
+          </ul>
+          <DemoNote>Angka pada halaman ini dihitung dari data demo fiktif yang tersimpan di peramban.</DemoNote>
+        </Card>
+      </div>
+
+      <PerkaraFormModal open={perOpen} initial={null} onClose={() => { setPerOpen(false); toast('info', 'Info', 'Perkara dapat dikelanjutkan dengan mendaftarkan barang bukti.'); }} />
+    </div>
+  );
+}
+
+/* ---------- Data Perkara ---------- */
+function PerkaraPage() {
+  const { data, user, deletePerkara, toast } = useApp();
+  const [q, setQ] = useState('');
+  const [tahap, setTahap] = useState('');
+  const [dari, setDari] = useState('');
+  const [sampai, setSampai] = useState('');
+  const [page, setPage] = useState(1);
+  const PS = 8;
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Perkara | null>(null);
+  const [delTarget, setDelTarget] = useState<Perkara | null>(null);
+
+  useEffect(() => { setPage(1); }, [q, tahap, dari, sampai]);
+
+  const filtered = useMemo(() => data.perkara.filter((p: Perkara) => {
+    const s = q.trim().toLowerCase();
+    if (s && !(p.nomorLP.toLowerCase().includes(s) || p.uraian.toLowerCase().includes(s) || p.penyidik.toLowerCase().includes(s))) return false;
+    if (tahap && p.tahap !== tahap) return false;
+    if (dari && p.tanggalLaporan < dari) return false;
+    if (sampai && p.tanggalLaporan > sampai) return false;
+    return true;
+  }).sort((a: Perkara, b: Perkara) => b.tanggalLaporan.localeCompare(a.tanggalLaporan)), [data.perkara, q, tahap, dari, sampai]);
+
+  const pages = Math.max(1, Math.ceil(filtered.length / PS));
+  const cur = Math.min(page, pages);
+  const paged = filtered.slice((cur - 1) * PS, cur * PS);
+  const hasFilter = !!(q || tahap || dari || sampai);
+  const linkedCount = (p: Perkara) => data.barang.filter((b: BarangBukti) => b.nomorLP === p.nomorLP).length;
+  const delLinked = delTarget ? linkedCount(delTarget) : 0;
+
+  function confirmDelete() {
+    if (!delTarget) return;
+    const r = deletePerkara(delTarget.id);
+    if (r.ok) toast('success', 'Perkara dihapus', delTarget.nomorLP + ' telah dihapus dari data demo.');
+    else toast('error', 'Gagal menghapus', r.msg);
+    setDelTarget(null);
+  }
+
+  return (
+    <div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <SearchInput className="w-full sm:w-72" placeholder="Cari nomor LP atau nama perkara…" value={q} onChange={(e: any) => setQ(e.target.value)} />
+          <Select className="w-36" value={tahap} onChange={(e: any) => setTahap(e.target.value)} options={[['', 'Semua Tahap'], ['Lidik', 'Lidik'], ['Sidik', 'Sidik']]} />
+          <div className="flex items-center gap-1.5">
+            <Input type="date" className="w-[150px]" value={dari} onChange={(e: any) => setDari(e.target.value)} title="Dari tanggal" />
+            <span className="text-xs text-slate-400">s/d</span>
+            <Input type="date" className="w-[150px]" value={sampai} onChange={(e: any) => setSampai(e.target.value)} title="Sampai tanggal" />
+          </div>
+          {hasFilter && (
+            <button onClick={() => { setQ(''); setTahap(''); setDari(''); setSampai(''); }} className="text-xs font-semibold text-blue-600 hover:underline">
+              Atur ulang
+            </button>
+          )}
+        </div>
+        <Button icon="plus" onClick={() => { setEditing(null); setFormOpen(true); }}>Tambah Perkara</Button>
+      </div>
+
+      <Card noPad className="mt-4">
+        {paged.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[880px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 font-semibold">Nomor LP</th>
+                  <th className="px-4 py-3 font-semibold">Tanggal Laporan</th>
+                  <th className="px-4 py-3 font-semibold">Nama / Judul Perkara</th>
+                  <th className="px-4 py-3 font-semibold">Tahap</th>
+                  <th className="px-4 py-3 font-semibold">Penyidik</th>
+                  <th className="px-4 py-3 text-center font-semibold">Jumlah BB</th>
+                  <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paged.map((p: Perkara) => (
+                  <tr key={p.id} className="transition hover:bg-slate-50/70">
+                    <td className="whitespace-nowrap px-5 py-3.5"><a href={'#/perkara/' + p.id} className="font-semibold text-navy-800 hover:text-blue-700">{p.nomorLP}</a></td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-xs tabular-nums text-slate-500">{fmtDate(p.tanggalLaporan)}</td>
+                    <td className="max-w-[300px] px-4 py-3.5"><span className="line-clamp-2 text-slate-700" title={p.uraian}>{p.uraian}</span></td>
+                    <td className="px-4 py-3.5"><Badge>{p.tahap}</Badge></td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-slate-600">{p.penyidik}</td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span className="inline-flex h-6 min-w-[26px] items-center justify-center rounded-full bg-slate-100 px-1.5 text-xs font-bold tabular-nums text-slate-600">{linkedCount(p)}</span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex justify-end gap-1.5">
+                        <IconBtn icon="eye" title="Lihat detail perkara" onClick={() => { window.location.hash = '#/perkara/' + p.id; }} />
+                        <IconBtn icon="pencil" title="Edit perkara" onClick={() => { setEditing(p); setFormOpen(true); }} />
+                        {user.role === 'Administrator' && <IconBtn icon="trash-2" tone="danger" title="Hapus perkara" onClick={() => setDelTarget(p)} />}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon="folder-open" title="Tidak ada perkara yang cocok"
+            desc="Ubah kata kunci pencarian atau filter, atau catat perkara baru untuk memulai."
+            action={<Button icon="plus" onClick={() => { setEditing(null); setFormOpen(true); }}>Tambah Perkara</Button>} />
+        )}
+        <Pagination page={cur} pageSize={PS} total={filtered.length} onPage={setPage} />
+      </Card>
+
+      <DemoNote>Seluruh data perkara pada halaman ini adalah data contoh (demo) dan tidak merepresentasikan perkara sebenarnya.</DemoNote>
+
+      <PerkaraFormModal open={formOpen} initial={editing} onClose={() => setFormOpen(false)} />
+      <ConfirmDialog open={!!delTarget} onClose={() => setDelTarget(null)} onConfirm={confirmDelete}
+        title="Hapus Data Perkara?" confirmLabel="Hapus Perkara" confirmDisabled={delLinked > 0}>
+        <p>Data perkara <span className="font-semibold text-navy-800">{delTarget?.nomorLP}</span> akan dihapus dari penyimpanan demo dan tidak dapat dibatalkan.</p>
+        {delLinked > 0 && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+            Masih terdapat {delLinked} barang bukti terkait. Hapus atau alihkan barang bukti tersebut terlebih dahulu.
+          </p>
+        )}
+      </ConfirmDialog>
+    </div>
+  );
+}
+
+/* ---------- Detail Perkara ---------- */
+function PerkaraDetailPage({ id }: { id: string }) {
+  const { data, user, toast } = useApp();
+  const p = data.perkara.find((x: Perkara) => x.id === id);
+  const [editOpen, setEditOpen] = useState(false);
+  if (!p) return <NotFound message="Data perkara tidak ditemukan pada penyimpanan demo." />;
+  const bb = data.barang.filter((b: BarangBukti) => b.nomorLP === p.nomorLP);
+  const count = (s: StatusBB) => bb.filter((b: BarangBukti) => b.status === s).length;
+
+  return (
+    <div className="space-y-5">
+      <a href="#/perkara" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-blue-700">
+        <Icon name="arrow-left" size={14} />Kembali ke Data Perkara
+      </a>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-bold text-navy-800">{p.nomorLP}</h2>
+              <Badge>{p.tahap}</Badge>
+            </div>
+            <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600">{p.uraian}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><Icon name="calendar" size={13} />Lapor: {fmtDate(p.tanggalLaporan)}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><Icon name="user" size={13} />{p.penyidik}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><Icon name="package" size={13} />{bb.length} barang bukti</span>
+            </div>
+          </div>
+          <div className="no-print flex flex-wrap gap-2">
+            <Button variant="secondary" icon="pencil" onClick={() => setEditOpen(true)}>Edit</Button>
+            <ButtonLink to={'/barang-bukti/baru?lp=' + encodeURIComponent(p.nomorLP)} icon="plus">Daftarkan Barang Bukti</ButtonLink>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <Card title="Informasi Umum Perkara">
+            <InfoGrid rows={[
+              { l: 'Nomor Laporan Polisi', v: p.nomorLP },
+              { l: 'Tanggal Laporan', v: fmtDate(p.tanggalLaporan) },
+              { l: 'Tahap Penanganan', v: <Badge>{p.tahap}</Badge> },
+              { l: 'Penyidik / Petugas', v: p.penyidik },
+              { l: 'Uraian Singkat', v: p.uraian, wide: true },
+            ]} />
+            <DemoNote>Data perkara bersifat demonstrasi dan disamarkan sepenuhnya.</DemoNote>
+          </Card>
+
+          <Card noPad title="Barang Bukti Terkait" desc="Barang bukti yang terhubung dengan nomor LP ini.">
+            {bb.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                      <th className="px-5 py-3 font-semibold">Kode</th>
+                      <th className="px-4 py-3 font-semibold">Nama</th>
+                      <th className="px-4 py-3 font-semibold">Kategori</th>
+                      <th className="px-4 py-3 font-semibold">Diterima</th>
+                      <th className="px-4 py-3 font-semibold">Kondisi</th>
+                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {bb.map((b: BarangBukti) => (
+                      <tr key={b.id} className="transition hover:bg-slate-50/70">
+                        <td className="whitespace-nowrap px-5 py-3"><a href={'#/barang-bukti/' + b.id} className="text-xs font-bold text-navy-800 hover:text-blue-700">{b.kode}</a></td>
+                        <td className="max-w-[220px] truncate px-4 py-3 text-slate-700">{b.nama}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">{b.kategori}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-slate-500">{fmtDate(b.tanggalPenerimaan)}</td>
+                        <td className="px-4 py-3"><CondDot kondisi={b.kondisi} /></td>
+                        <td className="px-4 py-3"><Badge>{b.status}</Badge></td>
+                        <td className="px-5 py-3 text-right"><IconBtn icon="eye" title="Lihat detail" onClick={() => { window.location.hash = '#/barang-bukti/' + b.id; }} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState icon="package" title="Belum ada barang bukti"
+                desc="Belum terdapat barang bukti yang terdaftar untuk perkara ini."
+                action={<ButtonLink to={'/barang-bukti/baru?lp=' + encodeURIComponent(p.nomorLP)} icon="plus">Daftarkan Barang Bukti</ButtonLink>} />
+            )}
+          </Card>
+        </div>
+
+        <Card title="Ringkasan Barang Bukti" desc="Status tersimpan untuk perkara ini.">
+          <p className="text-3xl font-extrabold tabular-nums text-navy-800">{bb.length}</p>
+          <p className="mt-0.5 text-xs text-slate-500">total barang bukti terdaftar</p>
+          <ul className="mt-4 space-y-2">
+            {STATUS_BB.map((s: StatusBB) => (
+              <li key={s} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-xs">
+                <Badge>{s}</Badge>
+                <span className="font-bold tabular-nums text-navy-800">{count(s)}</span>
+              </li>
+            ))}
+          </ul>
+          <DemoNote>Hanya Administrator yang dapat menghapus perkara pada demo ini.</DemoNote>
+        </Card>
+      </div>
+
+      <PerkaraFormModal open={editOpen} initial={p} onClose={() => setEditOpen(false)} />
+    </div>
+  );
+}
+
+/* ---------- Data Barang Bukti ---------- */
+function BarangBuktiPage({ query }: { query: URLSearchParams }) {
+  const { data } = useApp();
+  const { barang, perkara } = data;
+  const [q, setQ] = useState(query.get('q') || '');
+  const [kategori, setKategori] = useState(query.get('kategori') || '');
+  const [status, setStatus] = useState(query.get('status') || '');
+  const [tahap, setTahap] = useState(query.get('tahap') || '');
+  const [page, setPage] = useState(1);
+  const PS = 8;
+
+  useEffect(() => {
+    setQ(query.get('q') || ''); setKategori(query.get('kategori') || '');
+    setStatus(query.get('status') || ''); setTahap(query.get('tahap') || '');
+    setPage(1);
+  }, [query.toString()]);
+
+  const tahapOf = (lp: string) => { const p = perkara.find((x: Perkara) => x.nomorLP === lp); return p ? p.tahap : ''; };
+
+  const filtered = useMemo(() => barang.filter((b: BarangBukti) => {
+    const s = q.trim().toLowerCase();
+    if (s && !(b.kode.toLowerCase().includes(s) || b.nama.toLowerCase().includes(s) || b.nomorLP.toLowerCase().includes(s)
+      || b.lokasi.toLowerCase().includes(s) || (b.nomorSeri || '').toLowerCase().includes(s))) return false;
+    if (kategori && b.kategori !== kategori) return false;
+    if (status && b.status !== status) return false;
+    if (tahap && tahapOf(b.nomorLP) !== tahap) return false;
+    return true;
+  }).sort((a: BarangBukti, b: BarangBukti) => a.kode.localeCompare(b.kode)), [barang, perkara, q, kategori, status, tahap]);
+
+  const pages = Math.max(1, Math.ceil(filtered.length / PS));
+  const cur = Math.min(page, pages);
+  const paged = filtered.slice((cur - 1) * PS, cur * PS);
+  const hasFilter = !!(q || kategori || status || tahap);
+
+  return (
+    <div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <SearchInput className="w-full sm:w-72" placeholder="Cari kode, nama barang, atau nomor LP…" value={q} onChange={(e: any) => setQ(e.target.value)} />
+          <Select className="w-44" value={kategori} onChange={(e: any) => setKategori(e.target.value)} placeholder="Semua Kategori" options={KATEGORI.map((k: string) => [k, k])} />
+          <Select className="w-44" value={status} onChange={(e: any) => setStatus(e.target.value)} placeholder="Semua Status" options={STATUS_BB.map((s: string) => [s, s])} />
+          <Select className="w-36" value={tahap} onChange={(e: any) => setTahap(e.target.value)} placeholder="Semua Tahap" options={[['Lidik', 'Lidik'], ['Sidik', 'Sidik']]} />
+          {hasFilter && (
+            <button onClick={() => { setQ(''); setKategori(''); setStatus(''); setTahap(''); }} className="text-xs font-semibold text-blue-600 hover:underline">
+              Atur ulang
+            </button>
+          )}
+        </div>
+        <ButtonLink to="/barang-bukti/baru" icon="plus">Tambah Barang Bukti</ButtonLink>
+      </div>
+
+      <Card noPad className="mt-4">
+        {paged.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1060px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 font-semibold">Kode BB</th>
+                  <th className="px-4 py-3 font-semibold">Nama Barang Bukti</th>
+                  <th className="px-4 py-3 font-semibold">Kategori</th>
+                  <th className="px-4 py-3 font-semibold">Nomor LP</th>
+                  <th className="px-4 py-3 font-semibold">Tgl Terima</th>
+                  <th className="px-4 py-3 font-semibold">Kondisi</th>
+                  <th className="px-4 py-3 font-semibold">Lokasi Penyimpanan</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paged.map((b: BarangBukti) => {
+                  const pk = perkara.find((x: Perkara) => x.nomorLP === b.nomorLP);
+                  return (
+                    <tr key={b.id} className="transition hover:bg-slate-50/70">
+                      <td className="whitespace-nowrap px-5 py-3.5">
+                        <a href={'#/barang-bukti/' + b.id} className="text-xs font-bold text-navy-800 hover:text-blue-700">{b.kode}</a>
+                        {b.draf && <span className="ml-1.5"><Badge>Draf</Badge></span>}
+                      </td>
+                      <td className="max-w-[220px] px-4 py-3.5"><span className="block truncate text-slate-700" title={b.nama}>{b.nama}</span></td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{b.kategori}</td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-xs">
+                        {pk ? <a href={'#/perkara/' + pk.id} className="text-slate-600 hover:text-blue-700">{b.nomorLP}</a> : <span className="text-slate-400">{b.nomorLP || '—'}</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-xs tabular-nums text-slate-500">{fmtDate(b.tanggalPenerimaan)}</td>
+                      <td className="px-4 py-3.5"><CondDot kondisi={b.kondisi} /></td>
+                      <td className="max-w-[190px] px-4 py-3.5"><span className="block truncate text-xs text-slate-600" title={b.lokasi}>{b.lokasi}</span></td>
+                      <td className="px-4 py-3.5"><Badge>{b.status}</Badge></td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <IconBtn icon="eye" title="Lihat detail" onClick={() => { window.location.hash = '#/barang-bukti/' + b.id; }} />
+                          <IconBtn icon="pencil" title="Edit barang bukti" onClick={() => { window.location.hash = '#/barang-bukti/' + b.id + '/edit'; }} />
+                          <IconBtn icon="history" title="Lihat riwayat" onClick={() => { window.location.hash = '#/barang-bukti/' + b.id + '?tab=riwayat'; }} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon="package" title="Tidak ada data yang cocok"
+            desc="Tidak ditemukan barang bukti sesuai kata kunci atau filter yang dipilih."
+            action={<Button variant="secondary" icon="rotate-ccw" onClick={() => { setQ(''); setKategori(''); setStatus(''); setTahap(''); }}>Atur Ulang Filter</Button>} />
+        )}
+        <Pagination page={cur} pageSize={PS} total={filtered.length} onPage={setPage} />
+      </Card>
+
+      <DemoNote>Contoh data memuat perangkat elektronik dan media penyimpanan digital fiktif, tanpa data pribadi maupun data perkara sebenarnya.</DemoNote>
+    </div>
+  );
+}
+
+/* ---------- Tambah / Edit Barang Bukti ---------- */
+function BarangFormPage({ id, query }: { id?: string; query: URLSearchParams }) {
+  const { data, user, addBarang, updateBarang, toast } = useApp();
+  const editing = id ? data.barang.find((b: BarangBukti) => b.id === id) : undefined;
+  const petugasOpts = data.users.filter((u: UserAkun) => u.status === 'Aktif').map((u: UserAkun) => [u.nama, u.nama] as [string, string]);
+  const lpOpts = data.perkara.map((p: Perkara) => [p.nomorLP, p.nomorLP + ' — ' + (p.uraian.length > 42 ? p.uraian.slice(0, 42) + '…' : p.uraian)] as [string, string]);
+
+  const [f, setF] = useState<any>(() => editing ? {
+    kode: editing.kode, nama: editing.nama, kategori: editing.kategori, deskripsi: editing.deskripsi,
+    nomorSeri: editing.nomorSeri, kondisi: editing.kondisi, nomorLP: editing.nomorLP,
+    tanggalPenerimaan: editing.tanggalPenerimaan, petugasPenerima: editing.petugasPenerima,
+    lokasi: editing.lokasi, status: editing.status, catatan: editing.catatan,
+  } : {
+    kode: nextKodeBB(data.barang), nama: '', kategori: 'Elektronik', deskripsi: '', nomorSeri: '',
+    kondisi: 'Baik', nomorLP: query.get('lp') || '', tanggalPenerimaan: todayISO(),
+    petugasPenerima: user ? user.nama : '', lokasi: '', status: 'Tersedia', catatan: '',
+  });
+  const [errs, setErrs] = useState<any>({});
+  const [lamp, setLamp] = useState<Lampiran[]>(editing ? editing.lampiran : []);
+
+  const set = (key: string, v: any) => setF((o: any) => ({ ...o, [key]: v }));
+
+  function onFiles(e: any) {
+    const files: File[] = Array.from(e.target.files || []);
+    if (files.length) {
+      setLamp((ls: Lampiran[]) => [...ls, ...files.map((fl: File) => ({ id: uid('lm'), nama: fl.name, tipe: fl.type || 'tidak diketahui', ukuran: fl.size }))]);
+      toast('info', 'Metadata berkas ditambahkan', 'Demo hanya mencatat nama, jenis, dan ukuran berkas.');
+    }
+    e.target.value = '';
+  }
+
+  function submit(final: boolean) {
+    const e: any = {};
+    if (!f.kode.trim()) e.kode = 'Kode barang bukti wajib diisi.';
+    else if (data.barang.some((b: BarangBukti) => b.kode.toLowerCase() === f.kode.trim().toLowerCase() && (!editing || b.id !== editing.id)))
+      e.kode = 'Kode sudah digunakan oleh barang bukti lain.';
+    if (!f.nama.trim()) e.nama = 'Nama barang bukti wajib diisi.';
+    if (!f.kategori) e.kategori = 'Pilih kategori.';
+    if (!f.kondisi) e.kondisi = 'Pilih kondisi fisik.';
+    if (!f.nomorLP) e.nomorLP = 'Pilih nomor perkara (LP) terkait.';
+    if (!f.tanggalPenerimaan) e.tanggalPenerimaan = 'Tanggal penerimaan wajib diisi.';
+    if (!f.petugasPenerima) e.petugasPenerima = 'Petugas penerima wajib dipilih.';
+    if (!f.lokasi) e.lokasi = 'Lokasi penyimpanan wajib dipilih.';
+    if (!f.status) e.status = 'Status wajib dipilih.';
+    setErrs(e);
+    if (Object.keys(e).length) { toast('error', 'Formulir belum lengkap', 'Periksa kembali isian yang ditandai merah.'); return; }
+
+    const payload = { ...f, lampiran: lamp, draf: !final };
+    if (editing) {
+      updateBarang(editing.id, payload);
+      toast('success', 'Perubahan disimpan', final ? 'Data barang bukti berhasil diperbarui.' : 'Perubahan draft berhasil disimpan.');
+      window.location.hash = '#/barang-bukti/' + editing.id;
+    } else {
+      const nb = addBarang(payload);
+      toast('success', final ? 'Barang bukti terdaftar' : 'Draft disimpan',
+        final ? nb.kode + ' tercatat beserta kejadian Penerimaan pada riwayat.' : nb.kode + ' disimpan sebagai draft dan dapat dilengkapi kemudian.');
+      window.location.hash = '#/barang-bukti/' + nb.id;
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <a href={editing ? '#/barang-bukti/' + editing.id : '#/barang-bukti'} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-blue-700">
+        <Icon name="arrow-left" size={14} />{editing ? 'Kembali ke detail' : 'Kembali ke Data Barang Bukti'}
+      </a>
+
+      <div>
+        <h2 className="text-lg font-bold text-navy-800">{editing ? 'Edit Barang Bukti' : 'Tambah Barang Bukti'}</h2>
+        <p className="mt-0.5 text-sm text-slate-500">{editing ? 'Perbarui data ' + editing.kode + ' pada penyimpanan demo.' : 'Daftarkan barang bukti baru beserta informasi perkara dan penyimpanannya.'}</p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <Icon name="alert-triangle" size={18} className="mt-0.5 shrink-0 text-amber-600" />
+        <div className="text-xs leading-relaxed text-amber-800">
+          <p className="font-bold">Mode demo — jangan unggah berkas asli yang bersifat rahasia atau tergolong klasifikasi.</p>
+          <p className="mt-0.5">Lampiran hanya menyimpan metadata (nama, jenis, ukuran) di penyimpanan lokal peramban dan tidak diunggah ke server mana pun.</p>
+        </div>
+      </div>
+
+      {/* Informasi Umum */}
+      <FormSection icon="package" title="Informasi Umum" desc="Identitas dan kondisi fisik barang bukti.">
+        <Field label="Kode Barang Bukti" required error={errs.kode} hint="Kode unik untuk penelusuran dan pelabelan fisik.">
+          <Input value={f.kode} error={errs.kode} onChange={(e: any) => set('kode', e.target.value)} />
+        </Field>
+        <Field label="Nama Barang Bukti" required error={errs.nama}>
+          <Input value={f.nama} error={errs.nama} onChange={(e: any) => set('nama', e.target.value)} placeholder="cth. Telepon Pintar Merk X Warna Hitam" />
+        </Field>
+        <Field label="Kategori" required error={errs.kategori}>
+          <Select value={f.kategori} error={errs.kategori} onChange={(e: any) => set('kategori', e.target.value)} options={KATEGORI.map((k: string) => [k, k])} />
+        </Field>
+        <Field label="Nomor Seri / IMEI (Opsional)">
+          <Input value={f.nomorSeri} onChange={(e: any) => set('nomorSeri', e.target.value)} placeholder="Kosongkan jika tidak terbaca" />
+        </Field>
+        <Field label="Kondisi Fisik" required error={errs.kondisi}>
+          <Select value={f.kondisi} error={errs.kondisi} onChange={(e: any) => set('kondisi', e.target.value)} options={KONDISI.map((k: string) => [k, k])} />
+        </Field>
+        <Field label="Deskripsi" className="sm:col-span-2">
+          <Textarea value={f.deskripsi} onChange={(e: any) => set('deskripsi', e.target.value)} placeholder="Ciri fisik, kelengkapan, keadaan saat diterima (data fiktif)…" />
+        </Field>
+      </FormSection>
+
+      {/* Informasi Perkara */}
+      <FormSection icon="briefcase" title="Informasi Perkara" desc="Kaitan barang bukti dengan laporan polisi.">
+        <Field label="Nomor Perkara (LP)" required error={errs.nomorLP}>
+          <Select value={f.nomorLP} error={errs.nomorLP} placeholder="Pilih nomor LP…" onChange={(e: any) => set('nomorLP', e.target.value)} options={lpOpts} />
+        </Field>
+        <Field label="Tanggal Penerimaan" required error={errs.tanggalPenerimaan}>
+          <Input type="date" value={f.tanggalPenerimaan} error={errs.tanggalPenerimaan} onChange={(e: any) => set('tanggalPenerimaan', e.target.value)} />
+        </Field>
+        <Field label="Petugas Penerima" required error={errs.petugasPenerima} className="sm:col-span-2">
+          <Select value={f.petugasPenerima} error={errs.petugasPenerima} placeholder="Pilih petugas penerima…" onChange={(e: any) => set('petugasPenerima', e.target.value)} options={petugasOpts} />
+        </Field>
+      </FormSection>
+
+      {/* Informasi Penyimpanan */}
+      <FormSection icon="archive" title="Informasi Penyimpanan" desc="Lokasi, status, dan catatan penyimpanan.">
+        <Field label="Lokasi Penyimpanan" required error={errs.lokasi}>
+          <Select value={f.lokasi} error={errs.lokasi} placeholder="Pilih lokasi…" onChange={(e: any) => set('lokasi', e.target.value)} options={LOKASI.map((l: string) => [l, l])} />
+        </Field>
+        <Field label="Status Penyimpanan" required error={errs.status}>
+          <Select value={f.status} error={errs.status} onChange={(e: any) => set('status', e.target.value)} options={STATUS_BB.map((s: string) => [s, s])} />
+        </Field>
+        <Field label="Catatan Penyimpanan" className="sm:col-span-2">
+          <Textarea value={f.catatan} onChange={(e: any) => set('catatan', e.target.value)} placeholder="cth. Disimpan menunggu jadwal pemeriksaan forensik digital…" />
+        </Field>
+      </FormSection>
+
+      {/* Lampiran */}
+      <FormSection icon="paperclip" title="Lampiran / Dokumen Pendukung (Opsional)" desc="Berita acara, foto kondisi, atau dokumen terkait.">
+        <div className="sm:col-span-2">
+          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-4">
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-1 py-3 text-center">
+              <Icon name="upload" size={20} className="text-slate-400" />
+              <span className="text-xs font-semibold text-slate-600">Pilih berkas untuk ditambahkan</span>
+              <span className="text-[11px] text-slate-400">PDF, gambar, atau dokumen — hanya nama, jenis, dan ukuran yang dicatat</span>
+              <input type="file" multiple className="hidden" onChange={onFiles} />
+            </label>
+            {lamp.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {lamp.map((l: Lampiran) => (
+                  <li key={l.id} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                    <Icon name="paperclip" size={14} className="shrink-0 text-slate-400" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-navy-800">{l.nama}</p>
+                      <p className="text-[11px] text-slate-400">{l.tipe} · {fmtBytes(l.ukuran)}</p>
+                    </div>
+                    <button type="button" onClick={() => setLamp((ls: Lampiran[]) => ls.filter((x: Lampiran) => x.id !== l.id))}
+                      className="shrink-0 text-slate-400 transition hover:text-red-600" aria-label="Hapus lampiran">
+                      <Icon name="x" size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </FormSection>
+
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-5">
+        <Button variant="ghost" onClick={() => { window.location.hash = editing ? '#/barang-bukti/' + editing.id : '#/barang-bukti'; }}>Batal</Button>
+        <Button variant="secondary" icon="save" onClick={() => submit(false)}>Simpan sebagai Draft</Button>
+        <Button icon="check" onClick={() => submit(true)}>{editing ? 'Simpan Perubahan' : 'Simpan & Daftarkan'}</Button>
+      </div>
+
+      <DemoNote>Menyimpan sebagai draft tidak mencatat kejadian Penerimaan; kejadian baru tercatat ketika draft didaftarkan melalui tombol Simpan.</DemoNote>
+    </div>
+  );
+}
+
+/* ---------- Modal kejadian barang bukti (perpindahan / peminjaman / dsb.) ---------- */
+function MovementModal({ open, onClose, fixedKode }: { open: boolean; onClose: () => void; fixedKode?: string }) {
+  const { data, addRiwayat, toast } = useApp();
+  const items = data.barang.filter((b: BarangBukti) => !b.draf && b.status !== 'Dihancurkan');
+  const petugasOpts = data.users.filter((u: UserAkun) => u.status === 'Aktif').map((u: UserAkun) => [u.nama, u.nama] as [string, string]);
+  const lokasiOpts = LOKASI.map((l: string) => [l, l] as [string, string]);
+
+  const [f, setF] = useState<any>(() => ({
+    kodeBB: fixedKode || '', jenis: 'Perpindahan', lokasiAsal: '', lokasiTujuan: '', petugas: '',
+    tanggalWaktu: nowLocal(), alasan: '', catatan: '', harapanKembali: '',
+  }));
+  const [errs, setErrs] = useState<any>({});
+
+  useEffect(() => {
+    if (!open) return;
+    const b = fixedKode ? data.barang.find((x: BarangBukti) => x.kode === fixedKode) : undefined;
+    setF({ kodeBB: b ? b.kode : '', jenis: 'Perpindahan', lokasiAsal: b ? b.lokasi : '', lokasiTujuan: '', petugas: '', tanggalWaktu: nowLocal(), alasan: '', catatan: '', harapanKembali: '' });
+    setErrs({});
+  }, [open, fixedKode]);
+
+  const set = (key: string, v: string) => setF((o: any) => ({ ...o, [key]: v }));
+  const onBarang = (kode: string) => {
+    const b = data.barang.find((x: BarangBukti) => x.kode === kode);
+    setF((o: any) => ({ ...o, kodeBB: kode, lokasiAsal: b ? b.lokasi : '' }));
+  };
+  const hasOpenLoan = f.kodeBB && data.riwayat.some((r: Riwayat) => r.kodeBB === f.kodeBB && r.jenis === 'Peminjaman' && r.statusKembali === 'Belum Kembali');
+
+  function submit() {
+    const e: any = {};
+    if (!f.kodeBB) e.kodeBB = 'Pilih barang bukti.';
+    if (f.jenis !== 'Penerimaan' && !f.lokasiAsal) e.lokasiAsal = 'Lokasi asal wajib dipilih.';
+    if (!f.lokasiTujuan) e.lokasiTujuan = 'Lokasi tujuan wajib dipilih.';
+    if (!f.petugas) e.petugas = 'Petugas yang menangani wajib dipilih.';
+    if (!f.tanggalWaktu) e.tanggalWaktu = 'Tanggal dan waktu wajib diisi.';
+    if (!f.alasan.trim()) e.alasan = 'Alasan/keperluan wajib diisi.';
+    if (f.jenis === 'Peminjaman') {
+      if (!f.harapanKembali) e.harapanKembali = 'Tanggal harapan kembali wajib diisi untuk peminjaman.';
+      else if (f.tanggalWaktu && f.harapanKembali < f.tanggalWaktu.slice(0, 10)) e.harapanKembali = 'Tanggal kembali tidak wajar (sebelum tanggal kejadian).';
+    }
+    setErrs(e);
+    if (Object.keys(e).length) { toast('error', 'Data belum lengkap', 'Periksa kembali isian yang ditandai merah.'); return; }
+    addRiwayat({
+      kodeBB: f.kodeBB, jenis: f.jenis, tanggalWaktu: f.tanggalWaktu,
+      lokasiAsal: f.jenis === 'Penerimaan' ? 'Penyerahan Penyidik' : f.lokasiAsal,
+      lokasiTujuan: f.lokasiTujuan, petugas: f.petugas, alasan: f.alasan.trim(), catatan: f.catatan.trim(),
+      harapanKembali: f.jenis === 'Peminjaman' ? f.harapanKembali : '',
+      statusKembali: f.jenis === 'Peminjaman' ? 'Belum Kembali' : '',
+    });
+    toast('success', 'Kejadian tercatat', f.jenis + ' untuk ' + f.kodeBB + ' berhasil dicatat pada riwayat (demo).');
+    onClose();
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} width="max-w-2xl"
+      title="Catat Kejadian Barang Bukti"
+      desc="Rekam perpindahan, peminjaman, pengembalian, pemeriksaan, penerimaan, atau pengalihan. Riwayat sebelumnya tidak pernah ditimpa — setiap kejadian ditambahkan sebagai catatan baru."
+      footer={<Fragment>
+        <Button variant="secondary" onClick={onClose}>Batal</Button>
+        <Button icon="check" onClick={submit}>Catat Kejadian</Button>
+      </Fragment>}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Barang Bukti" required error={errs.kodeBB} className="sm:col-span-2">
+          <Select value={f.kodeBB} error={errs.kodeBB} placeholder="Pilih kode barang bukti…" disabled={!!fixedKode}
+            onChange={(e: any) => onBarang(e.target.value)}
+            options={items.map((b: BarangBukti) => [b.kode, b.kode + ' — ' + b.nama] as [string, string])} />
+        </Field>
+        <Field label="Jenis Kejadian" required>
+          <Select value={f.jenis} onChange={(e: any) => set('jenis', e.target.value)} options={JENIS_RIWAYAT.map((j: string) => [j, j])} />
+        </Field>
+        <Field label="Tanggal & Waktu" required error={errs.tanggalWaktu}>
+          <Input type="datetime-local" value={f.tanggalWaktu} error={errs.tanggalWaktu} onChange={(e: any) => set('tanggalWaktu', e.target.value)} />
+        </Field>
+        <Field label="Lokasi Asal" required={f.jenis !== 'Penerimaan'} error={errs.lokasiAsal}
+          hint={f.jenis === 'Penerimaan' ? 'Penerimaan awal: barang diserahkan oleh penyidik.' : undefined}>
+          <Select value={f.jenis === 'Penerimaan' ? 'Penyerahan Penyidik' : f.lokasiAsal}
+            disabled={f.jenis === 'Penerimaan'} error={errs.lokasiAsal} placeholder="Pilih lokasi asal…"
+            onChange={(e: any) => set('lokasiAsal', e.target.value)}
+            options={f.jenis === 'Penerimaan' ? [['Penyerahan Penyidik', 'Penyerahan Penyidik']] : lokasiOpts} />
+        </Field>
+        <Field label="Lokasi Tujuan" required error={errs.lokasiTujuan}
+          hint={f.jenis === 'Pengembalian' ? 'Barang dikembalikan ke lokasi penyimpanan tetap.' : undefined}>
+          <Select value={f.lokasiTujuan} error={errs.lokasiTujuan} placeholder="Pilih lokasi tujuan…"
+            onChange={(e: any) => set('lokasiTujuan', e.target.value)}
+            options={f.jenis === 'Pengalihan' ? [...lokasiOpts, ['Pemusnahan (sesuai Berita Acara)', 'Pemusnahan (sesuai Berita Acara)']] : lokasiOpts} />
+        </Field>
+        {f.jenis === 'Peminjaman' && (
+          <Field label="Tanggal Harapan Kembali" required error={errs.harapanKembali}>
+            <Input type="date" value={f.harapanKembali} error={errs.harapanKembali} onChange={(e: any) => set('harapanKembali', e.target.value)} />
+          </Field>
+        )}
+        <Field label="Petugas yang Menangani" required error={errs.petugas} className={f.jenis === 'Peminjaman' ? '' : 'sm:col-span-1'}>
+          <Select value={f.petugas} error={errs.petugas} placeholder="Pilih petugas…" onChange={(e: any) => set('petugas', e.target.value)} options={petugasOpts} />
+        </Field>
+        <Field label="Alasan / Keperluan" required error={errs.alasan} className="sm:col-span-2">
+          <Input value={f.alasan} error={errs.alasan} onChange={(e: any) => set('alasan', e.target.value)} placeholder="cth. Pemeriksaan forensik digital (ekstraksi data)" />
+        </Field>
+        <Field label="Catatan" className="sm:col-span-2">
+          <Textarea value={f.catatan} onChange={(e: any) => set('catatan', e.target.value)} placeholder="Catatan tambahan (opsional)…" />
+        </Field>
+
+        {f.jenis === 'Peminjaman' && (
+          <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 sm:col-span-2">
+            <Icon name="info" size={13} className="mt-0.5 shrink-0" />
+            Status barang akan otomatis menjadi <b>Dipinjam</b> dan tercatat <b>Belum Kembali</b> sampai kejadian Pengembalian direkam.
+          </p>
+        )}
+        {f.jenis === 'Pengembalian' && (
+          <p className={cn('flex items-start gap-2 rounded-lg border px-3 py-2 text-[11px] leading-relaxed sm:col-span-2',
+            hasOpenLoan ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-600')}>
+            <Icon name="info" size={13} className="mt-0.5 shrink-0" />
+            {hasOpenLoan
+              ? 'Terdapat peminjaman aktif untuk barang ini — akan ditandai Sudah Kembali dan status barang kembali menjadi Tersedia.'
+              : 'Tidak terdapat peminjaman aktif untuk barang ini; status barang akan menjadi Tersedia.'}
+          </p>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------- Detail Barang Bukti ---------- */
+function BarangDetailPage({ id, query }: { id: string; query: URLSearchParams }) {
+  const { data, user, deleteBarang, toast } = useApp();
+  const b = data.barang.find((x: BarangBukti) => x.id === id);
+  const [tab, setTab] = useState(query.get('tab') || 'informasi');
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+  useEffect(() => { setTab(query.get('tab') || 'informasi'); }, [query.toString()]);
+
+  if (!b) return <NotFound message="Data barang bukti tidak ditemukan pada penyimpanan demo." />;
+  const p = data.perkara.find((x: Perkara) => x.nomorLP === b.nomorLP);
+  const rvList = useMemo(() => data.riwayat.filter((r: Riwayat) => r.kodeBB === b.kode)
+    .sort((a: Riwayat, c: Riwayat) => c.tanggalWaktu.localeCompare(a.tanggalWaktu)), [data.riwayat, b.kode]);
+  const rvCount = data.riwayat.filter((r: Riwayat) => r.kodeBB === b.kode).length;
+
+  function confirmDelete() {
+    const r = deleteBarang(b.id);
+    if (r.ok) { toast('success', 'Barang bukti dihapus', b.kode + ' beserta riwayatnya dihapus (demo).'); window.location.hash = '#/barang-bukti'; }
+    else toast('error', 'Gagal menghapus', r.msg);
+    setDelOpen(false);
+  }
+
+  return (
+    <div className="space-y-5">
+      <PrintHeader subtitle={'Lembar Detail Barang Bukti — ' + b.kode} />
+
+      <a href="#/barang-bukti" className="no-print inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-blue-700">
+        <Icon name="arrow-left" size={14} />Kembali ke Data Barang Bukti
+      </a>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold text-navy-800">{b.kode}</h2>
+              <Badge>{b.status}</Badge>
+              {b.draf && <Badge>Draf</Badge>}
+            </div>
+            <p className="mt-0.5 text-sm font-medium text-slate-600">{b.nama}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><Icon name={KAT_ICON[b.kategori]} size={13} />{b.kategori}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><Icon name="map-pin" size={13} />{b.lokasi}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><Icon name="calendar" size={13} />Diterima {fmtDate(b.tanggalPenerimaan)}</span>
+            </div>
+          </div>
+          <div className="no-print flex flex-wrap items-center gap-2">
+            <Button icon="arrow-right-left" onClick={() => setMoveOpen(true)}>Catat Perpindahan</Button>
+            <Button variant="secondary" icon="printer" onClick={() => window.print()}>Cetak</Button>
+            <IconBtn icon="pencil" title="Edit barang bukti" onClick={() => { window.location.hash = '#/barang-bukti/' + b.id + '/edit'; }} />
+            {user.role === 'Administrator' && <IconBtn icon="trash-2" tone="danger" title="Hapus barang bukti" onClick={() => setDelOpen(true)} />}
+          </div>
+        </div>
+      </div>
+
+      <div className="no-print">
+        <Tabs active={tab} onChange={setTab} tabs={[
+          { key: 'informasi', label: 'Informasi Umum', icon: 'package' },
+          { key: 'perkara', label: 'Perkara', icon: 'briefcase' },
+          { key: 'riwayat', label: 'Riwayat', icon: 'history' },
+          { key: 'dokumen', label: 'Dokumen', icon: 'paperclip' },
+        ]} />
+      </div>
+
+      {tab === 'informasi' && (
+        <Card title="Informasi Umum" desc="Identitas, kondisi, dan penyimpanan barang bukti.">
+          <InfoGrid rows={[
+            { l: 'Kode Barang Bukti', v: b.kode },
+            { l: 'Nama Barang Bukti', v: b.nama },
+            { l: 'Kategori', v: b.kategori },
+            { l: 'Nomor Seri / IMEI', v: b.nomorSeri },
+            { l: 'Kondisi Fisik', v: <CondDot kondisi={b.kondisi} /> },
+            { l: 'Status', v: <Badge>{b.status}</Badge> },
+            { l: 'Lokasi Penyimpanan', v: b.lokasi },
+            { l: 'Tanggal Penerimaan', v: fmtDate(b.tanggalPenerimaan) },
+            { l: 'Deskripsi', v: b.deskripsi, wide: true },
+            { l: 'Catatan Penyimpanan', v: b.catatan, wide: true },
+          ]} />
+        </Card>
+      )}
+
+      {tab === 'perkara' && (
+        <Card title="Perkara Terkait" desc="Kaitan barang bukti dengan laporan polisi dan petugas penerima.">
+          {p ? (
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Informasi Perkara</p>
+                <InfoGrid rows={[
+                  { l: 'Nomor LP', v: <a href={'#/perkara/' + p.id} className="font-semibold text-blue-700 hover:underline">{p.nomorLP}</a> },
+                  { l: 'Tanggal Laporan', v: fmtDate(p.tanggalLaporan) },
+                  { l: 'Tahap Penanganan', v: <Badge>{p.tahap}</Badge> },
+                  { l: 'Penyidik', v: p.penyidik },
+                ]} />
+                <ButtonLink to={'/perkara/' + p.id} variant="secondary" size="sm" icon="external-link" className="mt-4">Buka Detail Perkara</ButtonLink>
+              </div>
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Penerimaan Barang</p>
+                <InfoGrid rows={[
+                  { l: 'Tanggal Penerimaan', v: fmtDate(b.tanggalPenerimaan) },
+                  { l: 'Petugas Penerima', v: b.petugasPenerima },
+                  { l: 'Lokasi Saat Ini', v: b.lokasi },
+                  { l: 'Status', v: <Badge>{b.status}</Badge> },
+                ]} />
+              </div>
+            </div>
+          ) : (
+            <EmptyState icon="briefcase" title="Perkara tidak ditemukan"
+              desc="Nomor LP pada barang bukti ini tidak merujuk ke data perkara manapun (kemungkinan data demo diubah)."
+              action={<ButtonLink to="/perkara" variant="secondary" icon="folder-open">Buka Data Perkara</ButtonLink>} />
+          )}
+        </Card>
+      )}
+
+      {tab === 'riwayat' && (
+        <Card title="Riwayat Kejadian (Chain of Custody)"
+          desc={rvCount + ' kejadian tercatat untuk ' + b.kode + ' — diurutkan dari yang terbaru.'}
+          actions={<Button size="sm" icon="arrow-right-left" onClick={() => setMoveOpen(true)}>Catat Kejadian</Button>}>
+          <Timeline items={rvList} showKode={false} />
+          <div className="mt-5 border-t border-slate-100 pt-3">
+            <a href={'#/riwayat?kode=' + encodeURIComponent(b.kode)} className="text-xs font-semibold text-blue-600 hover:underline">
+              Lihat dalam tabel Riwayat Perpindahan
+            </a>
+          </div>
+        </Card>
+      )}
+
+      {tab === 'dokumen' && (
+        <Card title="Dokumen & Lampiran" desc="Metadata dokumen pendukung barang bukti ini.">
+          {b.lampiran.length ? (
+            <ul className="space-y-2">
+              {b.lampiran.map((l: Lampiran) => (
+                <li key={l.id} className="flex items-center gap-3 rounded-lg border border-slate-200 px-3.5 py-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500"><Icon name="file-text" size={16} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-navy-800">{l.nama}</p>
+                    <p className="text-[11px] text-slate-400">{l.tipe} · {fmtBytes(l.ukuran)}</p>
+                  </div>
+                  <Badge tone="Draf">Metadata demo</Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon="paperclip" title="Belum ada dokumen"
+              desc="Belum terdapat lampiran untuk barang bukti ini. Tambahkan melalui formulir edit (hanya metadata yang disimpan pada demo)."
+              action={<ButtonLink to={'/barang-bukti/' + b.id + '/edit'} variant="secondary" icon="pencil">Edit Barang Bukti</ButtonLink>} />
+          )}
+          <DemoNote>Isi berkas tidak disimpan pada mode demo — hanya nama, jenis, dan ukuran berkas.</DemoNote>
+        </Card>
+      )}
+
+      <MovementModal open={moveOpen} onClose={() => setMoveOpen(false)} fixedKode={b.kode} />
+      <ConfirmDialog open={delOpen} onClose={() => setDelOpen(false)} onConfirm={confirmDelete} title="Hapus Barang Bukti?" confirmLabel="Hapus">
+        <p>Data <span className="font-semibold text-navy-800">{b.kode}</span> beserta {rvCount} catatan riwayat terkait akan dihapus dari penyimpanan demo (mode demo mengizinkan penghapusan; sistem nyata tidak menimpa riwayat). Tindakan ini tidak dapat dibatalkan.</p>
+      </ConfirmDialog>
+    </div>
+  );
+}
+
+/* ---------- Riwayat Perpindahan ---------- */
+function RiwayatPage({ query }: { query: URLSearchParams }) {
+  const { data } = useApp();
+  const [q, setQ] = useState('');
+  const [jenis, setJenis] = useState('');
+  const [kode, setKode] = useState(query.get('kode') || '');
+  const [dari, setDari] = useState('');
+  const [sampai, setSampai] = useState('');
+  const [page, setPage] = useState(1);
+  const PS = 10;
+  const [moveOpen, setMoveOpen] = useState(false);
+
+  useEffect(() => { setKode(query.get('kode') || ''); setPage(1); }, [query.toString()]);
+  useEffect(() => { setPage(1); }, [q, jenis, kode, dari, sampai]);
+
+  const kodeOpts = useMemo(() => Array.from(new Set(data.barang.map((b: BarangBukti) => b.kode))).sort(), [data.barang]);
+
+  const filtered = useMemo(() => data.riwayat.filter((r: Riwayat) => {
+    const s = q.trim().toLowerCase();
+    if (s && !(r.kodeBB.toLowerCase().includes(s) || r.petugas.toLowerCase().includes(s) || r.alasan.toLowerCase().includes(s)
+      || r.lokasiAsal.toLowerCase().includes(s) || r.lokasiTujuan.toLowerCase().includes(s) || (r.catatan || '').toLowerCase().includes(s))) return false;
+    if (jenis && r.jenis !== jenis) return false;
+    if (kode && r.kodeBB !== kode) return false;
+    const d = r.tanggalWaktu.slice(0, 10);
+    if (dari && d < dari) return false;
+    if (sampai && d > sampai) return false;
+    return true;
+  }).sort((a: Riwayat, b: Riwayat) => b.tanggalWaktu.localeCompare(a.tanggalWaktu)), [data.riwayat, q, jenis, kode, dari, sampai]);
+
+  const pages = Math.max(1, Math.ceil(filtered.length / PS));
+  const cur = Math.min(page, pages);
+  const paged = filtered.slice((cur - 1) * PS, cur * PS);
+  const hasFilter = !!(q || jenis || kode || dari || sampai);
+  const idOf = (kodeBB: string) => { const b = data.barang.find((x: BarangBukti) => x.kode === kodeBB); return b ? b.id : ''; };
+
+  return (
+    <div>
+      <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+        <Icon name="info" size={16} className="mt-0.5 shrink-0 text-blue-600" />
+        <p className="text-xs leading-relaxed text-blue-900">
+          <span className="font-bold">Catatan:</span> Antarmuka ini merupakan prototipe log administratif untuk keperluan Kerja Praktik.
+          Riwayat yang ditampilkan tidak menegakkan integritas forensik maupun kelayakan hukum suatu barang bukti secara mandiri.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <SearchInput className="w-full sm:w-64" placeholder="Cari kode, petugas, alasan…" value={q} onChange={(e: any) => setQ(e.target.value)} />
+          <Select className="w-40" value={jenis} onChange={(e: any) => setJenis(e.target.value)} placeholder="Semua Jenis" options={JENIS_RIWAYAT.map((j: string) => [j, j])} />
+          <Select className="w-44" value={kode} onChange={(e: any) => setKode(e.target.value)} placeholder="Semua Kode BB" options={kodeOpts.map((k: string) => [k, k])} />
+          <div className="flex items-center gap-1.5">
+            <Input type="date" className="w-[150px]" value={dari} onChange={(e: any) => setDari(e.target.value)} title="Dari tanggal" />
+            <span className="text-xs text-slate-400">s/d</span>
+            <Input type="date" className="w-[150px]" value={sampai} onChange={(e: any) => setSampai(e.target.value)} title="Sampai tanggal" />
+          </div>
+          {hasFilter && (
+            <button onClick={() => { setQ(''); setJenis(''); setKode(''); setDari(''); setSampai(''); }} className="text-xs font-semibold text-blue-600 hover:underline">
+              Atur ulang
+            </button>
+          )}
+        </div>
+        <Button icon="arrow-right-left" onClick={() => setMoveOpen(true)}>Catat Perpindahan / Peminjaman</Button>
+      </div>
+
+      <Card noPad className="mt-4">
+        {paged.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1120px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 font-semibold">Tanggal & Waktu</th>
+                  <th className="px-4 py-3 font-semibold">Kode BB</th>
+                  <th className="px-4 py-3 font-semibold">Jenis Aktivitas</th>
+                  <th className="px-4 py-3 font-semibold">Lokasi Asal</th>
+                  <th className="px-4 py-3 font-semibold">Lokasi Tujuan</th>
+                  <th className="px-4 py-3 font-semibold">Petugas</th>
+                  <th className="px-4 py-3 font-semibold">Alasan</th>
+                  <th className="px-5 py-3 font-semibold">Catatan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paged.map((r: Riwayat) => {
+                  const m = JENIS_META[r.jenis] || JENIS_META.Perpindahan;
+                  const bid = idOf(r.kodeBB);
+                  return (
+                    <tr key={r.id} className="align-top transition hover:bg-slate-50/70">
+                      <td className="whitespace-nowrap px-5 py-3.5 text-xs tabular-nums text-slate-500">{fmtDateTime(r.tanggalWaktu)}</td>
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        {bid
+                          ? <a href={'#/barang-bukti/' + bid} className="text-xs font-bold text-navy-800 hover:text-blue-700">{r.kodeBB}</a>
+                          : <span className="text-xs font-bold text-navy-800">{r.kodeBB}</span>}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset', m.badge)}>
+                          <Icon name={m.icon} size={11} />{r.jenis}
+                        </span>
+                        {r.jenis === 'Peminjaman' && r.harapanKembali && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                            <span>kembali: <span className="font-semibold text-slate-700">{fmtDate(r.harapanKembali)}</span></span>
+                            {r.statusKembali && <Badge tone={r.statusKembali}>{r.statusKembali}</Badge>}
+                          </div>
+                        )}
+                      </td>
+                      <td className="max-w-[170px] px-4 py-3.5"><span className="block truncate text-xs text-slate-600" title={r.lokasiAsal}>{r.lokasiAsal}</span></td>
+                      <td className="max-w-[170px] px-4 py-3.5"><span className="block truncate text-xs font-medium text-navy-800" title={r.lokasiTujuan}>{r.lokasiTujuan}</span></td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-600">{r.petugas}</td>
+                      <td className="max-w-[200px] px-4 py-3.5"><span className="block truncate text-xs text-slate-600" title={r.alasan}>{r.alasan}</span></td>
+                      <td className="max-w-[200px] px-5 py-3.5"><span className="block truncate text-xs text-slate-400" title={r.catatan}>{r.catatan || '—'}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon="history" title="Tidak ada kejadian yang cocok"
+            desc="Belum terdapat riwayat perpindahan sesuai filter. Rekam kejadian baru melalui tombol Catat Perpindahan."
+            action={<Button variant="secondary" icon="rotate-ccw" onClick={() => { setQ(''); setJenis(''); setKode(''); setDari(''); setSampai(''); }}>Atur Ulang Filter</Button>} />
+        )}
+        <Pagination page={cur} pageSize={PS} total={filtered.length} onPage={setPage} />
+      </Card>
+
+      <DemoNote>Riwayat bersifat tambah-saja (append-only): entri sebelumnya tidak pernah ditimpa — perubahan direpresentasikan sebagai kejadian baru.</DemoNote>
+
+      <MovementModal open={moveOpen} onClose={() => setMoveOpen(false)} />
+    </div>
+  );
+}
+
+/* ---------- Laporan ---------- */
+function LaporanPage() {
+  const { data, user, toast } = useApp();
+  const [jenis, setJenis] = useState('rekap');
+  const [dari, setDari] = useState('2025-03-01');
+  const [sampai, setSampai] = useState('2025-05-31');
+  const [lp, setLp] = useState('');
+  const [kategori, setKategori] = useState('');
+  const [status, setStatus] = useState('');
+  const [tahap, setTahap] = useState('');
+
+  const countBy = (list: BarangBukti[], s: StatusBB) => list.filter((b: BarangBukti) => b.status === s).length;
+
+  const bbFiltered = useMemo(() => data.barang.filter((b: BarangBukti) => {
+    if (b.draf) return false;
+    if (b.tanggalPenerimaan < dari || b.tanggalPenerimaan > sampai) return false;
+    if (kategori && b.kategori !== kategori) return false;
+    if (status && b.status !== status) return false;
+    if (lp && b.nomorLP !== lp) return false;
+    if (tahap) {
+      const p = data.perkara.find((x: Perkara) => x.nomorLP === b.nomorLP);
+      if (!p || p.tahap !== tahap) return false;
+    }
+    return true;
+  }), [data, dari, sampai, kategori, status, lp, tahap]);
+
+  const pkFiltered = useMemo(() => data.perkara.filter((p: Perkara) => {
+    if (p.tanggalLaporan < dari || p.tanggalLaporan > sampai) return false;
+    if (lp && p.nomorLP !== lp) return false;
+    if (tahap && p.tahap !== tahap) return false;
+    return true;
+  }), [data, dari, sampai, lp, tahap]);
+
+  const rvFiltered = useMemo(() => data.riwayat.filter((r: Riwayat) => {
+    const d = r.tanggalWaktu.slice(0, 10);
+    if (d < dari || d > sampai) return false;
+    const b = data.barang.find((x: BarangBukti) => x.kode === r.kodeBB);
+    if (lp && (!b || b.nomorLP !== lp)) return false;
+    if (kategori && (!b || b.kategori !== kategori)) return false;
+    if (status && (!b || b.status !== status)) return false;
+    if (tahap) {
+      const p = b && data.perkara.find((x: Perkara) => x.nomorLP === b.nomorLP);
+      if (!p || p.tahap !== tahap) return false;
+    }
+    return true;
+  }), [data, dari, sampai, lp, kategori, status, tahap]);
+
+  function buildReport(): { title: string; headers: string[]; rows: (string | number)[][]; total: (string | number)[] } {
+    if (jenis === 'perkara') {
+      const rows = pkFiltered.map((p: Perkara) => [
+        p.nomorLP, p.uraian, p.tahap, p.penyidik, fmtDate(p.tanggalLaporan),
+        data.barang.filter((b: BarangBukti) => b.nomorLP === p.nomorLP && !b.draf).length,
+      ]);
+      const sum = rows.reduce((a: number, r: any) => a + (r[5] as number), 0);
+      return {
+        title: 'Laporan per Perkara',
+        headers: ['Nomor LP', 'Uraian Perkara', 'Tahap', 'Penyidik', 'Tgl Laporan', 'Jumlah BB'],
+        rows, total: ['TOTAL', '', '', '', pkFiltered.length + ' perkara', sum],
+      };
+    }
+    if (jenis === 'penyimpanan') {
+      const lok = Array.from(new Set(bbFiltered.map((b: BarangBukti) => b.lokasi))).sort();
+      const rows = lok.map((l: string) => {
+        const list = bbFiltered.filter((b: BarangBukti) => b.lokasi === l);
+        return [l, list.length, countBy(list, 'Tersedia'), countBy(list, 'Dipinjam'), countBy(list, 'Dalam Pemeriksaan'), countBy(list, 'Dihancurkan')];
+      });
+      return {
+        title: 'Laporan Status Penyimpanan',
+        headers: ['Lokasi Penyimpanan', 'Jumlah', 'Tersedia', 'Dipinjam', 'Dalam Pemeriksaan', 'Dihancurkan'],
+        rows,
+        total: ['TOTAL', bbFiltered.length, countBy(bbFiltered, 'Tersedia'), countBy(bbFiltered, 'Dipinjam'), countBy(bbFiltered, 'Dalam Pemeriksaan'), countBy(bbFiltered, 'Dihancurkan')],
+      };
+    }
+    if (jenis === 'riwayat') {
+      const rows = [...rvFiltered].sort((a: Riwayat, b: Riwayat) => b.tanggalWaktu.localeCompare(a.tanggalWaktu)).map((r: Riwayat) =>
+        [fmtDateTime(r.tanggalWaktu), r.kodeBB, r.jenis, r.lokasiAsal, r.lokasiTujuan, r.petugas, r.alasan]);
+      const pending = rvFiltered.filter((r: Riwayat) => r.jenis === 'Peminjaman' && r.statusKembali === 'Belum Kembali').length;
+      return {
+        title: 'Laporan Riwayat Perpindahan',
+        headers: ['Tanggal & Waktu', 'Kode BB', 'Jenis', 'Lokasi Asal', 'Lokasi Tujuan', 'Petugas', 'Alasan'],
+        rows,
+        total: ['TOTAL', rows.length + ' kejadian', '', '', '', pending + ' pinjaman belum kembali', ''],
+      };
+    }
+    // rekapitulasi (default)
+    const rows = KATEGORI.map((k: string) => {
+      const list = bbFiltered.filter((b: BarangBukti) => b.kategori === k);
+      return [k, list.length, countBy(list, 'Tersedia'), countBy(list, 'Dipinjam'), countBy(list, 'Dalam Pemeriksaan'), countBy(list, 'Dihancurkan')];
+    });
+    return {
+      title: 'Rekapitulasi Barang Bukti',
+      headers: ['Kategori', 'Jumlah', 'Tersedia', 'Dipinjam', 'Dalam Pemeriksaan', 'Dihancurkan'],
+      rows,
+      total: ['TOTAL', bbFiltered.length, countBy(bbFiltered, 'Tersedia'), countBy(bbFiltered, 'Dipinjam'), countBy(bbFiltered, 'Dalam Pemeriksaan'), countBy(bbFiltered, 'Dihancurkan')],
+    };
+  }
+
+  const rep = buildReport();
+
+  function doExport() {
+    const fname = `laporan-${jenis}-${todayISO()}.csv`;
+    exportCsv(fname, rep.headers, [...rep.rows, rep.total]);
+    toast('success', 'Ekspor CSV berhasil', 'Berkas ' + fname + ' diunduh (berisi data demo).');
+  }
+
+  return (
+    <div className="space-y-5">
+      <Card noPad className="no-print" title="Filter Laporan" desc="Sesuaikan parameter sebelum melihat pratinjau, mencetak, atau mengekspor."
+        actions={<div className="flex gap-2">
+          <Button variant="secondary" size="sm" icon="printer" onClick={() => window.print()}>Cetak</Button>
+          <Button size="sm" icon="download" onClick={doExport}>Ekspor CSV</Button>
+        </div>}>
+        <div className="grid gap-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Jenis Laporan" required>
+            <Select value={jenis} onChange={(e: any) => setJenis(e.target.value)} options={[
+              ['rekap', 'Rekapitulasi Barang Bukti'],
+              ['perkara', 'Laporan per Perkara'],
+              ['penyimpanan', 'Laporan Status Penyimpanan'],
+              ['riwayat', 'Laporan Riwayat Perpindahan'],
+            ]} />
+          </Field>
+          <Field label="Dari Tanggal">
+            <Input type="date" value={dari} onChange={(e: any) => setDari(e.target.value)} />
+          </Field>
+          <Field label="Sampai Tanggal">
+            <Input type="date" value={sampai} onChange={(e: any) => setSampai(e.target.value)} />
+          </Field>
+          <Field label="Nomor Perkara">
+            <Select value={lp} onChange={(e: any) => setLp(e.target.value)} placeholder="Semua Perkara"
+              options={data.perkara.map((p: Perkara) => [p.nomorLP, p.nomorLP] as [string, string])} />
+          </Field>
+          <Field label="Kategori">
+            <Select value={kategori} onChange={(e: any) => setKategori(e.target.value)} placeholder="Semua Kategori" options={KATEGORI.map((k: string) => [k, k])} />
+          </Field>
+          <Field label="Status Penyimpanan">
+            <Select value={status} onChange={(e: any) => setStatus(e.target.value)} placeholder="Semua Status" options={STATUS_BB.map((s: string) => [s, s])} />
+          </Field>
+          <Field label="Tahap Perkara">
+            <Select value={tahap} onChange={(e: any) => setTahap(e.target.value)} placeholder="Semua Tahap" options={[['Lidik', 'Lidik'], ['Sidik', 'Sidik']]} />
+          </Field>
+        </div>
+        <p className="border-t border-slate-100 px-5 py-3 text-[11px] leading-relaxed text-slate-400">
+          Rentang tanggal berlaku pada: tanggal penerimaan (rekapitulasi & status penyimpanan), tanggal laporan (per perkara),
+          dan tanggal kejadian (riwayat perpindahan). Filter kategori/status/tahap menyaring barang bukti terkait.
+        </p>
+      </Card>
+
+      <Card noPad className="print-region">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h3 className="text-sm font-bold text-navy-800">{rep.title}</h3>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Periode: {fmtDate(dari)} s.d. {fmtDate(sampai)} · Dibuat: {fmtDateTime(nowLocal())} · Sumber: data demo
+          </p>
+        </div>
+        {rep.rows.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  {rep.headers.map((h: string, i: number) => <th key={i} className="px-4 py-3 font-semibold">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rep.rows.map((r: any, i: number) => (
+                  <tr key={i} className="transition hover:bg-slate-50/60">
+                    {r.map((c: any, j: number) => (
+                      <td key={j} className={cn('px-4 py-3', j === 0 ? 'font-medium text-navy-800' : 'text-slate-700', typeof c === 'number' && 'tabular-nums')}>{c}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 bg-slate-50">
+                  {rep.total.map((c: any, j: number) => (
+                    <td key={j} className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-navy-800">{c}</td>
+                  ))}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon="inbox" title="Tidak ada data"
+            desc="Tidak ditemukan data pada rentang tanggal dan filter yang dipilih. Coba perluas rentang atau longgarkan filter." />
+        )}
+        <div className="no-print border-t border-slate-100 px-5 py-1">
+          <DemoNote>Pratinjau laporan dihasilkan dari data demo fiktif. Gunakan tombol Cetak untuk tata letak resmi dengan kop institusi.</DemoNote>
+        </div>
+
+        {/* Blok tanda tangan — hanya tampil saat dicetak */}
+        <div className="print-only mt-10 flex justify-end">
+          <div className="text-center text-xs text-slate-800">
+            <p>Manado, {fmtDate(todayISO())}</p>
+            <p>Petugas Pendataan Barang Bukti,</p>
+            <div style={{ height: 64 }} />
+            <p className="font-bold underline">{user ? user.nama : '.....................'}</p>
+            <p>Pangkat/NRP: ...........................</p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ---------- Manajemen Pengguna ---------- */
+function PenggunaPage() {
+  const { data, user, addUser, updateUser, setUserStatus, deleteUser, toast } = useApp();
+  const [q, setQ] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<UserAkun | null>(null);
+  const [delTarget, setDelTarget] = useState<UserAkun | null>(null);
+  const [f, setF] = useState<any>({ username: '', nama: '', role: 'Petugas', status: 'Aktif' });
+  const [errs, setErrs] = useState<any>({});
+
+  const list = data.users.filter((u: UserAkun) =>
+    (u.username + ' ' + u.nama).toLowerCase().includes(q.trim().toLowerCase()));
+
+  function openAdd() {
+    setEditing(null);
+    setF({ username: '', nama: '', role: 'Petugas', status: 'Aktif' });
+    setErrs({});
+    setFormOpen(true);
+  }
+  function openEdit(u: UserAkun) {
+    setEditing(u);
+    setF({ username: u.username, nama: u.nama, role: u.role, status: u.status });
+    setErrs({});
+    setFormOpen(true);
+  }
+  function submit() {
+    const e: any = {};
+    if (!f.username.trim()) e.username = 'Nama pengguna wajib diisi.';
+    else if (!/^[a-zA-Z0-9._-]+$/.test(f.username.trim())) e.username = 'Gunakan huruf, angka, titik, garis bawah, atau tanda hubung.';
+    else if (data.users.some((u: UserAkun) => u.username.toLowerCase() === f.username.trim().toLowerCase() && (!editing || u.id !== editing.id)))
+      e.username = 'Nama pengguna sudah digunakan.';
+    if (!f.nama.trim()) e.nama = 'Nama tampilan wajib diisi.';
+    if (!f.role) e.role = 'Pilih peran.';
+    setErrs(e);
+    if (Object.keys(e).length) { toast('error', 'Formulir belum lengkap', 'Periksa kembali isian yang ditandai merah.'); return; }
+    if (editing) { updateUser(editing.id, f); toast('success', 'Pengguna diperbarui', 'Data akun ' + f.username + ' disimpan (demo).'); }
+    else { const r = addUser(f); if (!r.ok) { toast('error', 'Gagal menambahkan', r.msg); return; } toast('success', 'Pengguna ditambahkan', 'Akun ' + f.username + ' dapat dipakai dengan kata sandi demo123.'); }
+    setFormOpen(false);
+  }
+  function toggleStatus(u: UserAkun) {
+    if (u.username === user.username) { toast('error', 'Tidak diizinkan', 'Anda tidak dapat menonaktifkan akun yang sedang digunakan.'); return; }
+    const ns = u.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
+    setUserStatus(u.id, ns);
+    toast(ns === 'Aktif' ? 'success' : 'info', 'Status pengguna diperbarui', '@' + u.username + ' kini berstatus ' + ns + ' (demo).');
+  }
+  function confirmDelete() {
+    if (!delTarget) return;
+    const r = deleteUser(delTarget.id);
+    if (r.ok) toast('success', 'Pengguna dihapus', '@' + delTarget.username + ' dihapus dari data demo.');
+    else toast('error', 'Gagal menghapus', r.msg);
+    setDelTarget(null);
+  }
+
+  return (
+    <div>
+      <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+        <Icon name="info" size={16} className="mt-0.5 shrink-0 text-blue-600" />
+        <p className="text-xs leading-relaxed text-blue-900">
+          <span className="font-bold">Catatan keamanan:</span> pada demo ini, peran (Administrator/Petugas) hanya memengaruhi tampilan
+          antarmuka — navigasi dan tombol. Pengamanan akses sesungguhnya memerlukan implementasi backend (misalnya sesi PHP + MySQL) dan tidak diklaim berjalan di sini.
+        </p>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SearchInput className="w-full sm:w-72" placeholder="Cari nama pengguna atau nama tampilan…" value={q} onChange={(e: any) => setQ(e.target.value)} />
+        <Button icon="plus" onClick={openAdd}>Tambah Pengguna</Button>
+      </div>
+
+      <Card noPad className="mt-4">
+        {list.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 font-semibold">Nama Pengguna</th>
+                  <th className="px-4 py-3 font-semibold">Nama Tampilan</th>
+                  <th className="px-4 py-3 font-semibold">Peran</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Aktivitas Terakhir</th>
+                  <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {list.map((u: UserAkun) => {
+                  const self = u.username === user.username;
+                  return (
+                    <tr key={u.id} className="transition hover:bg-slate-50/70">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar nama={u.nama} />
+                          <span className="text-xs font-bold text-navy-800">@{u.username}{self && <span className="ml-1 text-[10px] font-medium text-slate-400">(Anda)</span>}</span>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-slate-700">{u.nama}</td>
+                      <td className="px-4 py-3.5"><Badge>{u.role}</Badge></td>
+                      <td className="px-4 py-3.5"><Badge>{u.status}</Badge></td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-xs tabular-nums text-slate-500">{u.aktivitasTerakhir === '-' ? 'Belum pernah' : fmtDateTime(u.aktivitasTerakhir)}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <IconBtn icon="pencil" title="Edit pengguna" onClick={() => openEdit(u)} />
+                          <Button size="sm" variant="secondary" disabled={self} onClick={() => toggleStatus(u)}>
+                            {u.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                          </Button>
+                          <IconBtn icon="trash-2" tone="danger" title="Hapus pengguna"
+                            disabled={self || u.username === 'admin'}
+                            onClick={() => setDelTarget(u)} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon="users" title="Tidak ada pengguna yang cocok" desc="Ubah kata kunci pencarian atau tambahkan pengguna baru."
+            action={<Button icon="plus" onClick={openAdd}>Tambah Pengguna</Button>} />
+        )}
+      </Card>
+
+      <DemoNote>Kata sandi seluruh akun demo adalah demo123. Akun admin demo tidak dapat dihapus, dan Anda tidak dapat menonaktifkan akun sendiri.</DemoNote>
+
+      <Modal open={formOpen} onClose={() => setFormOpen(false)} width="max-w-lg"
+        title={editing ? 'Edit Pengguna' : 'Tambah Pengguna'}
+        desc={editing ? 'Perbarui data akun pada demo.' : 'Buat akun demo baru dengan kata sandi demo123.'}
+        footer={<Fragment>
+          <Button variant="secondary" onClick={() => setFormOpen(false)}>Batal</Button>
+          <Button icon="check" onClick={submit}>{editing ? 'Simpan Perubahan' : 'Simpan Pengguna'}</Button>
+        </Fragment>}>
+        <div className="grid gap-4">
+          <Field label="Nama Pengguna (Username)" required error={errs.username}
+            hint={editing ? 'Username tidak dapat diubah pada demo.' : undefined}>
+            <Input value={f.username} disabled={!!editing} error={errs.username} onChange={(e: any) => setF((o: any) => ({ ...o, username: e.target.value }))} placeholder="cth. nama.pengguna" />
+          </Field>
+          <Field label="Nama Tampilan" required error={errs.nama}>
+            <Input value={f.nama} error={errs.nama} onChange={(e: any) => setF((o: any) => ({ ...o, nama: e.target.value }))} placeholder="cth. IPTU Nama Lengkap" />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Peran" required error={errs.role}>
+              <Select value={f.role} error={errs.role} onChange={(e: any) => setF((o: any) => ({ ...o, role: e.target.value }))}
+                options={[['Administrator', 'Administrator'], ['Petugas', 'Petugas']]} />
+            </Field>
+            {editing ? (
+              <Field label="Status" required>
+                <Select value={f.status} onChange={(e: any) => setF((o: any) => ({ ...o, status: e.target.value }))}
+                  options={[['Aktif', 'Aktif'], ['Nonaktif', 'Nonaktif']]} />
+              </Field>
+            ) : (
+              <Field label="Kata Sandi (Demo)" hint="Seluruh akun demo menggunakan kata sandi: demo123">
+                <Input value="demo123" readOnly disabled />
+              </Field>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog open={!!delTarget} onClose={() => setDelTarget(null)} onConfirm={confirmDelete} title="Hapus Pengguna?" confirmLabel="Hapus">
+        <p>Akun <span className="font-semibold text-navy-800">@{delTarget?.username}</span> akan dihapus dari penyimpanan demo dan tidak dapat dibatalkan.</p>
+      </ConfirmDialog>
+    </div>
+  );
+}
+
+/* ---------- Pengaturan ---------- */
+function PengaturanPage() {
+  const { data, user, logout, resetDemo, toast } = useApp();
+  const [resetOpen, setResetOpen] = useState(false);
+  const size = fmtBytes((localStorage.getItem(STORE_KEY) || '').length);
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'siber-evidence-data-demo.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 800);
+    toast('success', 'Ekspor berhasil', 'Seluruh data demo diunduh sebagai berkas JSON.');
+  }
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-2">
+      <Card title="Informasi Aplikasi" desc="Identitas dan lingkup aplikasi demo.">
+        <InfoGrid rows={[
+          { l: 'Nama Aplikasi', v: 'SIBER EVIDENCE' },
+          { l: 'Versi', v: '1.0.0 (Demo Kerja Praktik)' },
+          { l: 'Pengelola', v: 'Subbid Siber, Ditreskrimsus Polda Sulawesi Utara' },
+          { l: 'Penyimpanan Data', v: 'localStorage peramban (tanpa server)' },
+          { l: 'Ukuran Data Tersimpan', v: size },
+        ]} />
+        <DemoNote>Aplikasi ini bukan sistem produksi dan tidak terhubung ke basis data maupun sistem Kepolisian mana pun.</DemoNote>
+      </Card>
+
+      <Card title="Akun Saat Ini" desc="Sesi pengguna demo yang sedang aktif.">
+        <div className="flex items-center gap-4">
+          <Avatar nama={user.nama} size="h-12 w-12 text-sm" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-navy-800">{user.nama}</p>
+            <p className="truncate text-xs text-slate-500">@{user.username}</p>
+            <div className="mt-1"><Badge>{user.role}</Badge></div>
+          </div>
+          <Button variant="secondary" icon="log-out" onClick={() => { logout(); toast('info', 'Anda telah keluar', 'Sesi demo diakhiri.'); }}>Keluar</Button>
+        </div>
+      </Card>
+
+      <Card title="Data Demo" desc="Kelola data contoh yang tersimpan di peramban.">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" icon="rotate-ccw" onClick={() => setResetOpen(true)}>Muat Ulang Data Contoh</Button>
+          <Button variant="secondary" icon="download" onClick={exportJson}>Ekspor Data (JSON)</Button>
+        </div>
+        <DemoNote>Menyimpan data di localStorage berarti mengosongkan data peramban akan menghapus seluruh perubahan Anda. Gunakan ekspor JSON sebagai cadangan.</DemoNote>
+      </Card>
+
+      <Card title="Panduan Singkat (Demo)" desc="Alur kerja yang dapat dicoba.">
+        <ol className="list-decimal space-y-2 pl-4 text-xs leading-relaxed text-slate-600">
+          <li>Masuk dengan akun <span className="font-semibold">admin / demo123</span> (Administrator) atau akun Petugas untuk melihat perbedaan peran.</li>
+          <li>Tambahkan perkara pada <span className="font-semibold">Data Perkara</span>, lalu daftarkan barang buktinya.</li>
+          <li>Catat perpindahan/peminjaman pada <span className="font-semibold">Riwayat Perpindahan</span> dan amati perubahan status otomatis.</li>
+          <li>Buat laporan pada halaman <span className="font-semibold">Laporan</span>, lalu cetak atau ekspor CSV.</li>
+        </ol>
+      </Card>
+
+      <Card className="lg:col-span-2" title="Integrasi Backend (Rencana)" desc="Struktur kode disiapkan agar mudah dihubungkan dengan backend PHP + MySQL.">
+        <p className="text-xs leading-relaxed text-slate-600">
+          Seluruh aksi CRUD terpusat pada provider aplikasi (bagian 5 pada kode). Untuk integrasi, ganti operasi
+          <span className="font-semibold"> setData(...)</span> dengan pemanggilan adapter <span className="font-semibold">apiFetch(...)</span>
+          ke endpoint berikut, lalu hidrasi state dari respons API:
+        </p>
+        <pre className="mt-3 overflow-x-auto rounded-lg bg-navy-900 p-4 text-[11px] leading-relaxed text-slate-300"><code>{`GET    /api/perkara                    -> daftar perkara
+POST   /api/perkara                    -> tambah perkara
+PUT    /api/perkara/{id}               -> perbarui perkara
+DELETE /api/perkara/{id}               -> hapus perkara
+GET    /api/barang-bukti               -> daftar barang bukti
+POST   /api/barang-bukti               -> daftar barang bukti baru
+PUT    /api/barang-bukti/{id}          -> perbarui barang bukti
+DELETE /api/barang-bukti/{id}          -> hapus (arsip) barang bukti
+GET    /api/riwayat?kode=BB-...        -> riwayat per barang
+POST   /api/riwayat                    -> catat kejadian perpindahan/peminjaman
+GET    /api/laporan/rekap?dari=&sampai -> data laporan`}</code></pre>
+        <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+          Struktur tabel minimum di MySQL: <span className="font-mono">perkara</span>, <span className="font-mono">barang_bukti</span>,
+          <span className="font-mono"> riwayat_bukti</span>, dan <span className="font-mono">pengguna</span>. Riwayat bersifat append-only.
+        </p>
+      </Card>
+
+      <Card className="lg:col-span-2" title="Disclaimer" desc="Lingkup dan batasan aplikasi.">
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <Icon name="alert-triangle" size={18} className="mt-0.5 shrink-0 text-amber-600" />
+          <p className="text-xs leading-relaxed text-amber-800">
+            SIBER EVIDENCE adalah aplikasi administratif pencatatan dan pemantauan barang bukti untuk keperluan Kerja Praktik.
+            Aplikasi ini bukan sistem pengambilan keputusan penyidikan, portal pengaduan publik, maupun alat analisis forensik.
+            Riwayat perpindahan yang dicatat tidak menegakkan integritas forensik atau kelayakan hukum secara mandiri.
+          </p>
+        </div>
+      </Card>
+
+      <ConfirmDialog open={resetOpen} onClose={() => setResetOpen(false)} danger={false} confirmLabel="Muat Ulang"
+        title="Muat Ulang Data Demo?" onConfirm={() => { resetDemo(); setResetOpen(false); toast('success', 'Data demo dimuat ulang', 'Seluruh data dikembalikan ke kondisi awal contoh.'); }}>
+        <p>Seluruh perubahan Anda (perkara, barang bukti, riwayat, pengguna) akan dihapus dan diganti dengan data contoh awal.</p>
+      </ConfirmDialog>
+    </div>
+  );
+}
+
+/* ============================== 10. ROOT & MOUNT ============================== */
+
+function AppRoot() {
+  const hash = useHash();
+  const { user } = useApp();
+  const path = hash.replace(/^#/, '') || '/';
+  if (!user) return <LoginPage />;
+  if (path === '/login' || path === '/' || path === '') return <Redirect to="/dashboard" />;
+  return <AppShell path={path} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <AppProvider>
+    <AppRoot />
+  </AppProvider>
+);
+</script>
+</body>
+</html>

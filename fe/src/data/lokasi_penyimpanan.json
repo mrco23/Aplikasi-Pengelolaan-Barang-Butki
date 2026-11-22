@@ -1,0 +1,11 @@
+[
+  { "id": 1, "nama": "Ruang Barang Bukti — Rak A1", "jenis": "penyimpanan", "keterangan": "Rak perangkat elektronik ukuran besar." },
+  { "id": 2, "nama": "Ruang Barang Bukti — Rak A2", "jenis": "penyimpanan", "keterangan": "Rak perangkat elektronik ukuran sedang." },
+  { "id": 3, "nama": "Ruang Barang Bukti — Rak B1", "jenis": "penyimpanan", "keterangan": "Rak telepon pintar dan tablet." },
+  { "id": 4, "nama": "Ruang Barang Bukti — Rak B2", "jenis": "penyimpanan", "keterangan": "Rak dokumen dan berkas cetak." },
+  { "id": 5, "nama": "Lemari Kunci 01", "jenis": "penyimpanan", "keterangan": "Lemari terkunci untuk media penyimpanan kecil." },
+  { "id": 6, "nama": "Lemari Kunci 02", "jenis": "penyimpanan", "keterangan": "Lemari terkunci untuk kartu dan barang kecil." },
+  { "id": 7, "nama": "Gudang Barang Bukti", "jenis": "penyimpanan", "keterangan": "Barang rusak atau berukuran besar." },
+  { "id": 8, "nama": "Ruang Forensik Digital", "jenis": "pemeriksaan", "keterangan": "Lokasi sementara saat pemeriksaan atau peminjaman tim forensik." },
+  { "id": 9, "nama": "Pemusnahan (sesuai Berita Acara)", "jenis": "pemusnahan", "keterangan": "Lokasi akhir barang bukti yang dimusnahkan." }
+]
