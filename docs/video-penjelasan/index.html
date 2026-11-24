@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Video Alur SIBER EVIDENCE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F4EEE3;--panel:#FFFFFF;--ink:#2B2A4C;--muted:#6B6880;--line:#E3DACB;--accent:#FF6B5B;--btn:#2B2A4C;--btnfg:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#16151E;--panel:#22212D;--ink:#F1EEE8;--muted:#A6A2B8;--line:#363548;--btn:#F1EEE8;--btnfg:#16151E}}
+:root[data-theme="dark"]{--bg:#16151E;--panel:#22212D;--ink:#F1EEE8;--muted:#A6A2B8;--line:#363548;--btn:#F1EEE8;--btnfg:#16151E}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+h1{font-family:"Baloo 2",Nunito,sans-serif;font-size:clamp(24px,4vw,36px);line-height:1.1;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px;font-weight:600}
+.stage{position:relative;border-radius:18px;overflow:hidden;background:#000;box-shadow:0 10px 40px rgba(0,0,0,.18);aspect-ratio:16/9}
+canvas{display:block;width:100%;height:100%;cursor:pointer}
+.big{position:absolute;inset:0;margin:auto;width:96px;height:96px;border-radius:50%;border:0;background:#FF6B5B;color:#fff;font-size:40px;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,.3);display:grid;place-items:center;padding-left:8px}
+.big[hidden]{display:none}
+.bar{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.bar button,.chap button,.rec button{font:inherit;font-weight:800;border:0;border-radius:999px;padding:9px 16px;cursor:pointer;background:var(--btn);color:var(--btnfg)}
+.bar .ghost,.chap button{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.chap button.on{background:#FF6B5B;color:#fff;border-color:#FF6B5B}
+input[type=range]{flex:1;min-width:160px;accent-color:#FF6B5B}
+.time{font-variant-numeric:tabular-nums;font-weight:700;color:var(--muted);min-width:96px}
+label.tg{display:flex;gap:6px;align-items:center;font-weight:700;color:var(--muted);cursor:pointer}
+.chap{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chap button{padding:6px 12px;font-size:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:18px}
+.rec{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.rec button{background:#E5484D;color:#fff}
+.rec button:disabled{opacity:.5;cursor:not-allowed}
+.rec .st{color:var(--muted);font-weight:700}
+.rec a{color:#FF6B5B;font-weight:800}
+details summary{cursor:pointer;font-weight:800}
+.script p{margin:6px 0;line-height:1.5}
+.script h3{margin:16px 0 4px;font-family:"Baloo 2",sans-serif;font-size:18px}
+small{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Gimana Caranya Barang Bukti Selalu Terlacak?</h1>
+  <p class="sub">Video animasi penjelasan alur aplikasi SIBER EVIDENCE · ±5 menit</p>
+
+  <div class="stage">
+    <canvas id="cv" width="1920" height="1080" aria-label="Video animasi alur SIBER EVIDENCE"></canvas>
+    <button class="big" id="big" aria-label="Putar">▶</button>
+  </div>
+
+  <div class="bar">
+    <button id="play">▶ Putar</button>
+    <span class="time" id="time">0:00 / 0:00</span>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Posisi video">
+    <label class="tg"><input type="checkbox" id="tts" checked> Narasi suara</label>
+    <label class="tg"><input type="checkbox" id="music" checked> Musik & efek</label>
+    <button class="ghost" id="fs">⛶ Layar penuh</button>
+  </div>
+  <div class="chap" id="chap"></div>
+
+  <div class="card">
+    <div class="rec">
+      <button id="rec">⬇ Buat file video (MP4)</button>
+      <span class="st" id="recst">Seluruh animasi dirender menjadi file MP4 1080p 30 fps, biasanya lebih cepat dari durasi videonya.</span>
+      <a id="dl" hidden></a>
+    </div>
+    <small>File video berisi gambar, subtitle, musik, dan efek suara. Narasi suara memakai suara bawaan peramban sehingga tidak ikut masuk ke file. Untuk video dengan suara narator, rekam suara sendiri dengan naskah di bawah. Biarkan tab tetap terbuka sampai selesai.</small>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Naskah narasi lengkap</summary>
+      <div class="script" id="script"></div>
+    </details>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   SIBER EVIDENCE — video animasi penjelasan alur aplikasi
+   Semua gambar digambar di <canvas> 1280x720 (skala 1.5x),
+   sehingga bisa direkam langsung dengan MediaRecorder.
+   ========================================================= */
+const W = 1280, H = 720, SCALE = 1.5;
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+const C = {
+  ink:'#2B2A4C', muted:'#6B6880', navy:'#1E3A6B', teal:'#2EC4B6', coral:'#FF6B5B', mustard:'#FFB830',
+  mint:'#7BD389', sky:'#7CC6FE', lilac:'#B79CED', red:'#E5484D', green:'#30A46C', amber:'#F5A524',
+  blue:'#4C8DF6', indigo:'#6E6AF0', violet:'#9B6DF2', slate:'#7A8194', white:'#FFFFFF',
+  skin:'#F1C29A', hair:'#2E2320', uni:'#A9834F', uniD:'#8C6A3B', pants:'#4A3B2A',
+};
+const FONT_H = '"Baloo 2", Nunito, system-ui, sans-serif';
+const FONT_B = 'Nunito, system-ui, sans-serif';
+
+/* ---------- matematika & easing ---------- */
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const E = {
+  out: x => 1 - Math.pow(1 - x, 3),
+  inOut: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  back: x => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+  bounce: x => {
+    const n = 7.5625, d = 2.75;
+    if (x < 1 / d) return n * x * x;
+    if (x < 2 / d) return n * (x -= 1.5 / d) * x + .75;
+    if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + .9375;
+    return n * (x -= 2.625 / d) * x + .984375;
+  },
+};
+const pr = (t, s, d = .5) => clamp((t - s) / d);
+const pop = (t, s, d = .5) => t < s ? 0 : E.back(pr(t, s, d));
+const fin = (t, s, d = .5) => E.out(pr(t, s, d));
+const fio = (t, s, d = .5) => E.inOut(pr(t, s, d));
+
+/* ---------- primitif gambar ---------- */
+function G(x, y, s, fn, o = {}) {
+  const a = o.a === undefined ? 1 : o.a;
+  if (s <= .001 || a <= .001) return;
+  ctx.save(); ctx.translate(x, y);
+  if (o.rot) ctx.rotate(o.rot);
+  ctx.scale(s * (o.sx || 1), s);
+  ctx.globalAlpha *= a;
+  fn(); ctx.restore();
+}
+function A(a, fn) { if (a <= .001) return; ctx.save(); ctx.globalAlpha *= a; fn(); ctx.restore(); }
+function rr(x, y, w, h, r, fill, stroke, lw = 3) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function circ(x, y, r, fill, stroke, lw = 3) {
+  ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function ell(x, y, rx, ry, fill) { ctx.beginPath(); ctx.ellipse(x, y, Math.max(0, rx), Math.max(0, ry), 0, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill(); }
+function T(str, x, y, o = {}) {
+  const { s = 24, w = 800, c = C.ink, al = 'center', f = FONT_B, bl = 'middle', max } = o;
+  ctx.font = `${w} ${s}px ${f}`; ctx.fillStyle = c; ctx.textAlign = al; ctx.textBaseline = bl;
+  max ? ctx.fillText(str, x, y, max) : ctx.fillText(str, x, y);
+}
+function tw(str, s = 24, w = 800, f = FONT_B) { ctx.font = `${w} ${s}px ${f}`; return ctx.measureText(str).width; }
+function shadowE(x, y, w, a = .13) { ell(x, y, w / 2, w * .085, `rgba(43,42,76,${a})`); }
+function pill(x, y, text, bg, fg = '#fff', s = 18, padX = 16) {
+  const w = tw(text, s, 800) + padX * 2, h = s + 18;
+  rr(x - w / 2, y - h / 2, w, h, h / 2, bg); T(text, x, y + 1, { s, c: fg });
+  return w;
+}
+function wrapText(str, maxW, s, w = 700, f = FONT_B) {
+  ctx.font = `${w} ${s}px ${f}`;
+  const words = str.split(' '), out = []; let cur = '';
+  for (const wd of words) {
+    const test = cur ? cur + ' ' + wd : wd;
+    if (ctx.measureText(test).width > maxW && cur) { out.push(cur); cur = wd; } else cur = test;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function bz(a, b, lift, n = 36) {
+  const cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2 - lift, pts = [];
+  for (let i = 0; i <= n; i++) {
+    const k = i / n;
+    pts.push([(1 - k) * (1 - k) * a[0] + 2 * (1 - k) * k * cx + k * k * b[0], (1 - k) * (1 - k) * a[1] + 2 * (1 - k) * k * cy + k * k * b[1]]);
+  }
+  return pts;
+}
+function along(pts, k) {
+  k = clamp(k); const i = Math.min(pts.length - 2, Math.floor(k * (pts.length - 1)));
+  const f = k * (pts.length - 1) - i;
+  return [lerp(pts[i][0], pts[i + 1][0], f), lerp(pts[i][1], pts[i + 1][1], f)];
+}
+/* polyline parsial (prog 0..1) + mata panah opsional */
+function path(pts, prog, color, lw = 5, dash = null, arrow = false) {
+  if (prog <= 0) return;
+  let total = 0; const seg = [];
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(d); total += d; }
+  let left = total * clamp(prog);
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  let tip = pts[0], prev = pts[0];
+  for (let i = 1; i < pts.length && left > 0; i++) {
+    const d = seg[i - 1];
+    if (left >= d) { ctx.lineTo(pts[i][0], pts[i][1]); prev = pts[i - 1]; tip = pts[i]; left -= d; }
+    else { const f = left / d; tip = [lerp(pts[i - 1][0], pts[i][0], f), lerp(pts[i - 1][1], pts[i][1], f)]; prev = pts[i - 1]; ctx.lineTo(tip[0], tip[1]); left = 0; }
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  if (arrow) {
+    const ang = Math.atan2(tip[1] - prev[1], tip[0] - prev[0]), L = lw * 3.2;
+    ctx.fillStyle = color; ctx.beginPath();
+    ctx.moveTo(tip[0] + Math.cos(ang) * L * .4, tip[1] + Math.sin(ang) * L * .4);
+    ctx.lineTo(tip[0] + Math.cos(ang + 2.5) * L, tip[1] + Math.sin(ang + 2.5) * L);
+    ctx.lineTo(tip[0] + Math.cos(ang - 2.5) * L, tip[1] + Math.sin(ang - 2.5) * L);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+function mark(x, y, r, ok, k = 1) {
+  G(x, y, k, () => {
+    circ(0, 0, r, ok ? C.green : C.red);
+    ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = r * .24; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+    if (ok) { ctx.moveTo(-r * .42, 0); ctx.lineTo(-r * .1, r * .32); ctx.lineTo(r * .45, -r * .34); }
+    else { ctx.moveTo(-r * .35, -r * .35); ctx.lineTo(r * .35, r * .35); ctx.moveTo(r * .35, -r * .35); ctx.lineTo(-r * .35, r * .35); }
+    ctx.stroke(); ctx.restore();
+  });
+}
+function sparkle(x, y, s, color, t = 0) {
+  G(x, y, s * (0.85 + Math.sin(t * 6) * .15), () => {
+    ctx.fillStyle = color; ctx.beginPath();
+    for (let i = 0; i < 8; i++) { const r = i % 2 ? 6 : 20, a = i * Math.PI / 4; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    ctx.closePath(); ctx.fill();
+  }, { rot: t });
+}
+
+/* ---------- karakter ---------- */
+const PETUGAS = { shirt: C.uni, cap: true };
+const ADMIN = { shirt: C.uniD, cap: false, glasses: true, star: true };
+function person(x, y, s, o = {}) {
+  const { shirt = C.uni, cap = true, glasses = false, star = false, mood = 'smile', pose = 'idle', t = 0 } = o;
+  let bob = 0, la = .12 + Math.sin(t * 2) * .03, ra = -.12 - Math.sin(t * 2) * .03;
+  if (pose === 'wave') ra = -2.5 + Math.sin(t * 10) * .35;
+  if (pose === 'scratch') ra = -2.8 + Math.sin(t * 14) * .1;
+  if (pose === 'point') ra = -1.45 + Math.sin(t * 3) * .05;
+  if (pose === 'cheer') { la = 2.6 + Math.sin(t * 8) * .1; ra = -2.6 - Math.sin(t * 8) * .1; bob = -Math.abs(Math.sin(t * 5)) * 8; }
+  const blink = (t % 3.3) < .12;
+  G(x, y, s, () => {
+    shadowE(0, 0, 120);
+    ctx.translate(0, bob);
+    rr(-26, -64, 22, 60, 8, C.pants); rr(4, -64, 22, 60, 8, C.pants);
+    rr(-32, -12, 32, 13, 6, '#1C1A22'); rr(2, -12, 32, 13, 6, '#1C1A22');
+    rr(-42, -152, 84, 100, 26, shirt);
+    rr(-42, -70, 84, 10, 2, '#2A2018');
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.moveTo(0, -152); ctx.lineTo(-14, -136); ctx.lineTo(0, -128); ctx.lineTo(14, -136); ctx.closePath(); ctx.fill();
+    if (star) { circ(-22, -118, 8, C.mustard); ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(0, -132); ctx.lineTo(-7, -96); ctx.lineTo(0, -88); ctx.lineTo(7, -96); ctx.closePath(); ctx.fill(); }
+    else { rr(12, -126, 22, 10, 3, '#E9E2D0'); rr(-34, -126, 18, 14, 3, 'rgba(0,0,0,.1)'); }
+    circ(0, -198, 46, C.skin);
+    if (cap) {
+      rr(-48, -262, 96, 40, [22, 22, 6, 6], C.pants);
+      ell(0, -224, 54, 9, '#16120E');
+      circ(0, -244, 8, C.mustard);
+      rr(-46, -224, 8, 18, 4, C.hair); rr(38, -224, 8, 18, 4, C.hair);
+    } else {
+      ctx.fillStyle = C.hair; ctx.beginPath(); ctx.arc(0, -204, 47, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+      rr(-47, -214, 12, 22, 5, C.hair); rr(35, -214, 12, 22, 5, C.hair);
+    }
+    if (mood === 'worry') {
+      ctx.strokeStyle = C.hair; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-24, -216); ctx.lineTo(-8, -212); ctx.moveTo(24, -216); ctx.lineTo(8, -212); ctx.stroke();
+    }
+    ell(-16, -198, 5.5, blink ? 1 : 7.5, C.ink); ell(16, -198, 5.5, blink ? 1 : 7.5, C.ink);
+    if (glasses) { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; circ(-16, -198, 13, null, C.ink, 3); circ(16, -198, 13, null, C.ink, 3); ctx.beginPath(); ctx.moveTo(-3, -199); ctx.lineTo(3, -199); ctx.stroke(); }
+    circ(-29, -181, 8, 'rgba(255,110,110,.35)'); circ(29, -181, 8, 'rgba(255,110,110,.35)');
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath();
+    if (mood === 'smile') ctx.arc(0, -184, 13, .2 * Math.PI, .8 * Math.PI);
+    else if (mood === 'o') { ctx.stroke(); ell(0, -176, 6, 8, C.ink); ctx.beginPath(); }
+    else { ctx.moveTo(-10, -174); ctx.quadraticCurveTo(-4, -178, 0, -174); ctx.quadraticCurveTo(5, -170, 10, -174); }
+    ctx.stroke();
+    const arm = (sx, ang) => G(sx, -140, 1, () => { rr(-11, -6, 22, 66, 11, shirt); circ(0, 62, 12, C.skin); }, { rot: ang });
+    arm(-36, la); arm(36, ra);
+  });
+}
+
+/* ---------- ikon & benda ---------- */
+function phone(screen) {
+  rr(-42, -78, 84, 156, 18, C.ink);
+  rr(-34, -64, 68, 122, 8, '#BFE4FF');
+  ctx.save(); ctx.beginPath(); ctx.roundRect(-34, -64, 68, 122, 8); ctx.clip();
+  if (screen) screen(); else {
+    rr(-26, -52, 40, 18, 8, '#fff'); rr(-14, -26, 40, 18, 8, C.mustard); rr(-26, 0, 34, 18, 8, '#fff');
+    T('Rp', 6, -17, { s: 11, c: C.ink });
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(-34, 20); ctx.lineTo(34, -40); ctx.lineTo(34, -18); ctx.lineTo(-34, 42); ctx.fill();
+  ctx.restore();
+  rr(-12, -72, 24, 5, 3, '#4A4970'); circ(0, 67, 5, '#4A4970');
+}
+function bagShell(label = 'BARANG BUKTI', ghost = false) {
+  rr(-75, -95, 150, 190, 16, ghost ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.45)', ghost ? 'rgba(43,42,76,.35)' : 'rgba(43,42,76,.45)', 3);
+  if (ghost) { ctx.setLineDash([8, 7]); rr(-75, -95, 150, 190, 16, null, C.slate, 3); ctx.setLineDash([]); }
+  rr(-75, -95, 150, 20, [16, 16, 4, 4], ghost ? C.slate : C.coral);
+  for (let i = -60; i <= 60; i += 12) rr(i - 2, -89, 4, 8, 2, 'rgba(255,255,255,.6)');
+  rr(-62, 32, 124, 46, 8, '#fff', ghost ? C.slate : 'rgba(229,72,77,.6)', 2);
+  T(label, 0, 49, { s: 14, c: ghost ? C.slate : C.red });
+  T('SEGEL No. 001', 0, 66, { s: 10, c: C.muted });
+  ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-56, -62); ctx.lineTo(-56, 12); ctx.stroke();
+}
+function miniLaptop() { rr(-44, -46, 88, 56, 6, C.ink); rr(-38, -41, 76, 46, 3, '#BFE4FF'); rr(-54, 10, 108, 10, 4, '#8A8AA8'); }
+function bag(x, y, s, o = {}) {
+  G(x, y, s, () => { if (!o.ghost) (o.content || miniLaptop)(); bagShell(o.label, o.ghost); }, { rot: o.rot || 0, a: o.a === undefined ? 1 : o.a });
+}
+function folder(label, sub, color = C.mustard, dark = '#E09A1A') {
+  rr(-95, -78, 70, 28, 10, dark); rr(-95, -64, 190, 136, 14, dark);
+  rr(-80, -82, 160, 90, 6, '#fff');
+  for (let i = 0; i < 4; i++) rr(-66, -70 + i * 14, i === 3 ? 70 : 130, 5, 2, '#D7D2E4');
+  rr(-95, -42, 190, 114, 14, color);
+  T(label, 0, 2, { s: 18, c: C.ink, f: FONT_H });
+  if (sub) T(sub, 0, 32, { s: 13, w: 800, c: 'rgba(43,42,76,.72)' });
+}
+function shield(color = C.navy, icon = 'scan') {
+  ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(0, -56); ctx.quadraticCurveTo(28, -42, 50, -42); ctx.lineTo(50, 0);
+  ctx.quadraticCurveTo(48, 40, 0, 62); ctx.quadraticCurveTo(-48, 40, -50, 0); ctx.lineTo(-50, -42);
+  ctx.quadraticCurveTo(-28, -42, 0, -56); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+  if (icon === 'check') { ctx.moveTo(-20, 2); ctx.lineTo(-5, 18); ctx.lineTo(22, -14); ctx.stroke(); }
+  else { ctx.arc(-4, -2, 17, 0, Math.PI * 2); ctx.moveTo(9, 11); ctx.lineTo(22, 24); ctx.stroke(); }
+}
+function laptop(screen) {
+  rr(-220, -150, 440, 284, 20, C.ink);
+  rr(-204, -134, 408, 252, 8, '#F7FAFF');
+  ctx.save(); ctx.beginPath(); ctx.roundRect(-204, -134, 408, 252, 8); ctx.clip(); if (screen) screen(); ctx.restore();
+  ctx.fillStyle = '#A3A8C0'; ctx.beginPath(); ctx.moveTo(-262, 134); ctx.lineTo(262, 134); ctx.lineTo(240, 162); ctx.lineTo(-240, 162); ctx.closePath(); ctx.fill();
+  rr(-40, 134, 80, 8, 4, '#8A8FA8');
+}
+function cabinet() {
+  rr(-80, -120, 160, 240, 14, '#7E8DAE');
+  for (let i = 0; i < 3; i++) { rr(-66, -106 + i * 76, 132, 64, 8, '#AEBBD6'); rr(-20, -80 + i * 76, 40, 9, 4, '#55627F'); }
+}
+function printer(paperK, kopFn) {
+  rr(-84, -96, 168, 64, 10, '#AEBBD6'); rr(-60, -116, 120, 30, 6, '#fff');
+  rr(-120, -50, 240, 116, 20, '#6C7A9A'); rr(-120, -50, 240, 26, [20, 20, 0, 0], '#7E8DAE');
+  circ(88, -2, 7, C.mint); rr(-96, 40, 192, 12, 5, '#2B2A4C');
+  if (paperK > 0) {
+    const h = 200 * paperK;
+    ctx.save(); ctx.beginPath(); ctx.rect(-90, 46, 180, h); ctx.clip();
+    rr(-78, 46 + h - 200, 156, 200, 4, '#fff', '#D7D2E4', 2);
+    ctx.translate(0, 46 + h - 200); kopFn && kopFn(); ctx.restore();
+  }
+}
+function calendar(day, mon) {
+  rr(-42, -42, 84, 88, 12, '#fff', '#D7D2E4', 2); rr(-42, -42, 84, 26, [12, 12, 0, 0], C.red);
+  rr(-24, -50, 7, 16, 3, C.ink); rr(17, -50, 7, 16, 3, C.ink);
+  T(mon, 0, -29, { s: 13, c: '#fff' }); T(day, 0, 12, { s: 38, f: FONT_H });
+}
+function lock(color = C.mustard) {
+  ctx.strokeStyle = '#6C7A9A'; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(0, -14, 18, Math.PI, 0); ctx.stroke();
+  rr(-28, -16, 56, 46, 10, color); circ(0, 2, 6, C.ink); rr(-3, 2, 6, 14, 3, C.ink);
+}
+function eraser() { rr(-50, -24, 100, 48, 10, '#FF9AB0'); rr(14, -24, 36, 48, [0, 10, 10, 0], '#6E8BFF'); }
+function csvDoc(label = 'CSV', color = C.green) {
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-50, -66); ctx.lineTo(24, -66); ctx.lineTo(50, -40); ctx.lineTo(50, 66); ctx.lineTo(-50, 66); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#D7D2E4'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#E4E0EE'; ctx.beginPath(); ctx.moveTo(24, -66); ctx.lineTo(24, -40); ctx.lineTo(50, -40); ctx.closePath(); ctx.fill();
+  rr(-38, 18, 76, 30, 8, color); T(label, 0, 34, { s: 17, c: '#fff' });
+  for (let i = 0; i < 3; i++) rr(-36, -48 + i * 16, 60, 6, 3, '#D7D2E4');
+}
+function excelSheet() {
+  rr(-90, -70, 180, 140, 10, '#fff', '#D7D2E4', 2); rr(-90, -70, 180, 26, [10, 10, 0, 0], C.green);
+  T('Excel', 0, -56, { s: 13, c: '#fff' });
+  ctx.strokeStyle = '#DDE8E0'; ctx.lineWidth = 2;
+  for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-90 + i * 45, -44); ctx.lineTo(-90 + i * 45, 70); ctx.stroke(); }
+  for (let j = 1; j < 5; j++) { ctx.beginPath(); ctx.moveTo(-90, -44 + j * 23); ctx.lineTo(90, -44 + j * 23); ctx.stroke(); }
+}
+function station(label, color, kind, t) {
+  shadowE(0, 6, 170, .12);
+  rr(-66, -96, 132, 100, 12, color);
+  ctx.fillStyle = 'rgba(43,42,76,.18)'; ctx.beginPath(); ctx.moveTo(-76, -92); ctx.lineTo(0, -132); ctx.lineTo(76, -92); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(-72, -96); ctx.lineTo(0, -134); ctx.lineTo(72, -96); ctx.closePath(); ctx.fill();
+  rr(-20, -46, 40, 50, [8, 8, 0, 0], 'rgba(43,42,76,.25)');
+  G(0, -74, 1, () => {
+    if (kind === 'shelf') { for (let i = 0; i < 2; i++) { rr(-44, -14 + i * 16, 22, 10, 2, C.ink); rr(22, -14 + i * 16, 22, 10, 2, C.ink); } }
+    if (kind === 'lock') G(44, -2, .45, () => lock('#fff'));
+    if (kind === 'scope') { circ(40, -4, 10, null, C.ink, 4); rr(46, 2, 5, 12, 2, C.ink, null); circ(-40, -4, 10, null, C.ink, 4); }
+    if (kind === 'fire') { const f = Math.sin(t * 12) * 2; ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(40, -20 + f); ctx.quadraticCurveTo(56, 0, 40, 10); ctx.quadraticCurveTo(24, 0, 40, -20 + f); ctx.fill(); ctx.beginPath(); ctx.moveTo(-40, -20 - f); ctx.quadraticCurveTo(-24, 0, -40, 10); ctx.quadraticCurveTo(-56, 0, -40, -20 - f); ctx.fill(); }
+  });
+  pill(0, 32, label, C.ink, '#fff', 15, 12);
+}
+function icon(name, s = 1, col = '#fff') {
+  G(0, 0, s, () => {
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (name === 'lock') { ctx.beginPath(); ctx.arc(0, -8, 12, Math.PI, 0); ctx.stroke(); rr(-18, -8, 36, 28, 6, col); }
+    if (name === 'dash') { rr(-20, -20, 17, 17, 4, col); rr(3, -20, 17, 17, 4, col); rr(-20, 3, 17, 17, 4, col); rr(3, 3, 17, 17, 4, col); }
+    if (name === 'folder') { rr(-22, -16, 18, 8, 3, col); rr(-22, -12, 44, 32, 5, col); }
+    if (name === 'bag') { rr(-17, -20, 34, 42, 6, null, col, 5); rr(-17, -20, 34, 8, 3, col); }
+    if (name === 'move') { ctx.beginPath(); ctx.moveTo(-20, -6); ctx.lineTo(16, -6); ctx.moveTo(8, -14); ctx.lineTo(16, -6); ctx.lineTo(8, 2); ctx.moveTo(20, 10); ctx.lineTo(-16, 10); ctx.moveTo(-8, 2); ctx.lineTo(-16, 10); ctx.lineTo(-8, 18); ctx.stroke(); }
+    if (name === 'print') { rr(-20, -6, 40, 22, 5, col); rr(-12, -20, 24, 12, 2, null, col, 4); rr(-12, 10, 24, 14, 2, '#0000', col, 4); }
+    if (name === 'user') { circ(0, -9, 10, col); rr(-18, 4, 36, 18, 9, col); }
+  });
+}
+
+/* ---------- latar ---------- */
+function bg(color, blob) {
+  ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = blob;
+  ctx.beginPath(); ctx.ellipse(120, 90, 260, 180, .3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(1180, 640, 300, 200, -.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(1150, 110, 120, 90, 0, 0, Math.PI * 2); ctx.fill();
+}
+const grain = (() => {
+  const g = document.createElement('canvas'); g.width = g.height = 180;
+  const gx = g.getContext('2d'), d = gx.createImageData(180, 180);
+  for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = Math.random() < .5 ? 10 : 0; }
+  gx.putImageData(d, 0, 0); return g;
+})();
+let grainPat = null;
+
+/* =========================================================
+   ADEGAN
+   ========================================================= */
+const SC = [
+/* 1 ─ Pembuka */
+{
+  chapter: 'Pembuka', bg: '#FFE9C7', blob: '#FFDDAA', accent: C.coral,
+  lines: [
+    'Bayangkan: sebuah HP disita dari pelaku penipuan online.',
+    'HP itu sekarang jadi barang bukti. Tapi setelah itu... dia disimpan di mana?',
+    'Siapa yang memegangnya? Siapa yang meminjamnya? Dan gimana caranya semua itu bisa dilacak?',
+  ],
+  fx: L => [[.2, 'pop'], [L[0] + 1.8, 'stamp'], [L[1] + .3, 'whoosh'], [L[2] + .1, 'pop'], [L[2] + .4, 'pop'], [L[2] + .75, 'pop'], [L[2] + 1.1, 'pop'], [L[2] + 1.45, 'pop']],
+  draw(t, L) {
+    const shift = fio(t, L[2], .8), bob = Math.sin(t * 2) * 6;
+    const px = lerp(640, 440, shift), py = 320 + bob;
+    shadowE(px, 500, 200 * (1 - .15 * shift));
+    G(px, py, pop(t, .2, .6) * lerp(1.15, 1, shift), () => {
+      phone();
+      const st = pr(t, L[0] + 1.8, .3);
+      if (st > 0) G(0, 0, lerp(2.4, 1, E.out(st)), () => { rr(-66, -24, 132, 48, 8, 'rgba(255,255,255,.75)', C.red, 5); T('DISITA', 0, 2, { s: 28, c: C.red, f: FONT_H }); }, { rot: -.22, a: st });
+      const bi = fin(t, L[1] + .3, .8);
+      if (bi > 0) G(0, lerp(360, 6, bi), 1.25, () => bagShell(), { a: clamp(bi * 2) });
+    });
+    const qs = [[700, 180, C.coral, 0], [820, 300, C.teal, .35], [700, 430, C.mustard, .7], [890, 150, C.lilac, 1.05], [600, 120, C.blue, 1.4]];
+    qs.forEach(([x, y, c, d], i) => G(x, y + Math.sin(t * 3 + i) * 6, pop(t, L[2] + .1 + d, .5), () => T('?', 0, 0, { s: 110, c, f: FONT_H }), { rot: Math.sin(t * 2 + i) * .15 }));
+    person(1060, 560, pop(t, L[2] + .1, .6) * .95, { ...PETUGAS, mood: 'worry', pose: 'scratch', t });
+  },
+},
+/* 2 ─ Masalah & solusi */
+{
+  chapter: 'Masalahnya', bg: '#E5F3EA', blob: '#D3EBDB', accent: C.teal,
+  lines: [
+    'Di Subbid Siber Ditreskrimsus Polda Sulawesi Utara, barang bukti seperti ini jumlahnya banyak.',
+    'Kalau cuma dicatat di buku atau spreadsheet, datanya gampang tercecer dan susah ditelusuri.',
+    'Karena itu dibuatlah SIBER EVIDENCE: aplikasi web untuk mengelola barang bukti.',
+  ],
+  fx: L => [...[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => [L[0] + .3 + i * .22, 'drop']), [L[1] + .2, 'whoosh'], [L[1] + 1.6, 'pop'], [L[2], 'whoosh'], [L[2] + .5, 'pop'], [L[2] + 1.4, 'ding']],
+  draw(t, L) {
+    const out = 1 - fin(t, L[2] - .1, .5);
+    A(out, () => {
+      const items = [[230, 560, 'box'], [340, 560, 'bag'], [450, 560, 'box'], [560, 560, 'bag'], [285, 455, 'bag'], [395, 455, 'box'], [505, 455, 'bag'], [340, 350, 'box'], [450, 350, 'bag']];
+      items.forEach(([x, y, k], i) => {
+        const p = pr(t, L[0] + .3 + i * .22, .7); if (p <= 0) return;
+        const yy = y - (1 - E.bounce(p)) * 520;
+        if (k === 'box') G(x, yy, 1, () => { rr(-50, -96, 100, 96, 8, '#D9A66B'); rr(-50, -96, 100, 18, 4, '#C48F52'); rr(-12, -96, 24, 40, 2, '#F2D3A6'); });
+        else bag(x, yy - 50, .52, { rot: (i % 2 ? .06 : -.06) });
+      });
+      const k1 = pop(t, L[1], .6);
+      person(930, 580, k1 * .95, { ...PETUGAS, mood: 'worry', pose: 'scratch', t });
+      for (let i = 0; i < 7; i++) {
+        const a = t * 1.3 + i * Math.PI * 2 / 7, r = 175 + Math.sin(t * 2 + i) * 14;
+        G(930 + Math.cos(a) * r, 360 + Math.sin(a) * r * .6, fin(t, L[1] + .2 + i * .08, .5), () => {
+          if (i === 2) { rr(-34, -24, 68, 48, 4, '#fff', '#B7E1C3', 2); for (let j = 1; j < 3; j++) rr(-34 + j * 22, -24, 2, 48, 0, '#B7E1C3'); rr(-34, -8, 68, 2, 0, '#B7E1C3'); rr(-34, 8, 68, 2, 0, '#B7E1C3'); }
+          else if (i === 5) { rr(-30, -38, 60, 76, 6, C.coral); rr(-24, -32, 48, 64, 4, '#FFE3DD'); }
+          else { rr(-24, -32, 48, 64, 4, '#fff', '#D7D2E4', 2); for (let j = 0; j < 4; j++) rr(-16, -20 + j * 12, 32, 4, 2, '#D7D2E4'); }
+        }, { rot: a * .7 });
+      }
+      G(700, 165, pop(t, L[1] + 1.6, .5), () => {
+        rr(-150, -36, 300, 72, 24, '#fff'); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(90, 30); ctx.lineTo(130, 70); ctx.lineTo(60, 34); ctx.fill();
+        T('Barangnya di mana, ya...?', 0, 2, { s: 22 });
+      });
+    });
+    const k = pop(t, L[2] + .5, .7);
+    G(640, 360, k, () => {
+      shadowE(0, 175, 520);
+      laptop(() => {
+        rr(-204, -134, 108, 252, 0, C.navy);
+        for (let i = 0; i < 5; i++) rr(-190, -100 + i * 30, 80, 12, 6, i ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.8)');
+        for (let i = 0; i < 3; i++) rr(-80 + i * 92, -110, 80, 54, 8, ['#E3F6EA', '#FFF2D6', '#E6EEFF'][i]);
+        rr(-80, -40, 264, 140, 8, '#F0F2F8');
+        G(52, 30, .9, () => shield(C.navy));
+      });
+    });
+    const title = 'SIBER EVIDENCE';
+    ctx.font = `800 66px ${FONT_H}`; let x0 = 640 - ctx.measureText(title).width / 2;
+    [...title].forEach((ch, i) => {
+      const w = ctx.measureText(ch).width, kk = pop(t, L[2] + 1.0 + i * .05, .45);
+      G(x0 + w / 2, 110, kk, () => T(ch, 0, 0, { s: 66, f: FONT_H, c: i < 5 ? C.navy : C.coral }));
+      x0 += w;
+    });
+    A(fin(t, L[2] + 1.8, .5), () => T('Aplikasi Pengelolaan Barang Bukti Berbasis Web', 640, 162, { s: 22, w: 700, c: C.muted }));
+    [[330, 240, C.mustard], [950, 220, C.coral], [1000, 470, C.teal], [290, 480, C.lilac]].forEach(([x, y, c], i) => sparkle(x, y, pop(t, L[2] + 1.4 + i * .1, .4), c, t + i));
+  },
+},
+/* 3 ─ Pengguna */
+{
+  chapter: 'Siapa Penggunanya?', bg: '#E8EFFF', blob: '#D9E3FB', accent: C.blue,
+  lines: [
+    'Aplikasi ini punya dua jenis pengguna.',
+    'Petugas, yang sehari-hari mencatat perkara, barang bukti, dan setiap perpindahannya.',
+    'Dan Administrator, yang bisa melakukan semua itu, plus mengelola akun pengguna dan master data.',
+  ],
+  fx: L => [[.3, 'pop'], [L[1], 'pop'], ...[0, 1, 2, 3].map(i => [L[1] + 1 + i * .45, 'tick']), [L[2], 'pop'], ...[0, 1, 2, 3].map(i => [L[2] + 1 + i * .45, 'tick'])],
+  draw(t, L) {
+    G(640, 80, pop(t, .3, .5), () => { pill(0, 0, '2 jenis pengguna', C.ink, '#fff', 26, 26); });
+    const roles = [
+      { x: 170, cx: 300, s: L[1], o: PETUGAS, name: 'PETUGAS', col: C.uni, items: ['Catat perkara', 'Daftarkan barang bukti', 'Catat perpindahan', 'Buat laporan'], plus: false },
+      { x: 740, cx: 870, s: L[2], o: ADMIN, name: 'ADMINISTRATOR', col: C.navy, items: ['Semua fitur Petugas', 'Kelola akun pengguna', 'Master data', 'Hapus data'], plus: true },
+    ];
+    roles.forEach(r => {
+      const k = pop(t, r.s, .6);
+      person(r.x, 560, k * .95, { ...r.o, pose: t - r.s < 2.2 ? 'wave' : 'idle', t });
+      G(r.cx + 160, 330, k, () => {
+        rr(-160, -170, 320, 330, 22, '#fff');
+        rr(-160, -170, 320, 64, [22, 22, 0, 0], r.col); T(r.name, 0, -137, { s: 24, f: FONT_H, c: '#fff' });
+        r.items.forEach((it, i) => {
+          const kk = pop(t, r.s + 1 + i * .45, .4);
+          G(-124, -62 + i * 58, kk, () => { if (r.plus && i > 0) { circ(0, 0, 15, C.coral); T('+', 0, 1, { s: 22, c: '#fff' }); } else mark(0, 0, 15, true); });
+          A(kk, () => T(it, -98, -62 + i * 58, { s: 20, al: 'left', w: 800 }));
+        });
+      });
+    });
+  },
+},
+/* 4 ─ Login */
+{
+  chapter: 'Langkah 1 · Login', bg: '#E1F1FB', blob: '#CDE7F7', accent: C.sky,
+  lines: [
+    'Semuanya dimulai dari halaman login. Isi nama pengguna dan kata sandi, lalu tekan Masuk.',
+    'Sistem lalu memeriksa tiga hal: isiannya lengkap, kata sandinya benar, dan akunnya masih aktif.',
+    'Kalau lolos, sistem melihat peranmu. Administrator masuk ke /admin, Petugas masuk ke /petugas.',
+    'Iseng membuka halaman milik peran lain? Kamu otomatis dikembalikan ke dashboard sendiri.',
+  ],
+  fx: L => {
+    const f = [[.3, 'pop']];
+    for (let i = 0; i < 8; i++) f.push([.9 + i * .17, 'key']);
+    for (let i = 0; i < 7; i++) f.push([2.6 + i * .16, 'key']);
+    f.push([L[1] - .7, 'click'], [L[1] + .2, 'pop']);
+    [520, 650, 780].forEach(gx => f.push([L[1] + 1.2 + (gx - 400) / 460 * 3, 'tick']));
+    f.push([L[2] + .2, 'pop'], [L[2] + 3.2, 'ding'], [L[3] + 1.3, 'error'], [L[3] + 2.1, 'pop']);
+    return f;
+  },
+  draw(t, L) {
+    // kartu login
+    G(235, 335, pop(t, .3, .6), () => {
+      shadowE(0, 190, 330);
+      rr(-165, -170, 330, 340, 22, '#fff');
+      G(0, -128, .42, () => shield(C.navy));
+      T('Masuk', 0, -76, { s: 28, f: FONT_H });
+      T('Nama Pengguna', -130, -38, { s: 14, al: 'left', c: C.muted });
+      rr(-130, -24, 260, 44, 10, '#F4F6FA', '#D9DEE8', 2);
+      const u = 'd.kusuma'.slice(0, Math.floor(pr(t, .9, 1.36) * 8));
+      T(u, -116, -1, { s: 18, al: 'left', w: 700 });
+      T('Kata Sandi', -130, 40, { s: 14, al: 'left', c: C.muted });
+      rr(-130, 54, 260, 44, 10, '#F4F6FA', '#D9DEE8', 2);
+      const n = Math.floor(pr(t, 2.6, 1.12) * 7);
+      for (let i = 0; i < n; i++) circ(-112 + i * 18, 76, 5, C.ink);
+      const press = 1 - .08 * Math.sin(Math.PI * pr(t, L[1] - .75, .25));
+      G(0, 135, press, () => { rr(-130, -22, 260, 44, 12, C.navy); T('Masuk', 0, 1, { s: 19, c: '#fff' }); });
+    });
+    // kursor
+    const cm = fio(t, L[1] - 1.6, .8), cx = lerp(470, 300, cm), cy = lerp(620, 480, cm);
+    A(pr(t, L[1] - 1.8, .3) * (1 - pr(t, L[1] + .4, .3)), () => {
+      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + 30); ctx.lineTo(cx + 8, cy + 22); ctx.lineTo(cx + 15, cy + 36); ctx.lineTo(cx + 21, cy + 33); ctx.lineTo(cx + 14, cy + 20); ctx.lineTo(cx + 25, cy + 20); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    });
+    // gerbang pemeriksaan
+    path([[400, 335], [860, 335]], fin(t, L[1], 1), '#9DB3CF', 8, [2, 14]);
+    const gates = [[520, 'Lengkap?'], [650, 'Sandi benar?'], [780, 'Akun aktif?']];
+    const tok0 = L[1] + 1.2, tokD = 3;
+    const tokX = t < L[2] + 1.8 ? lerp(400, 860, clamp((t - tok0) / tokD)) : null;
+    gates.forEach(([gx, lab], i) => {
+      const k = pop(t, L[1] + .2 + i * .25, .5), passed = tokX !== null ? tokX >= gx : true;
+      G(gx, 335, k, () => {
+        circ(0, 0, 40, passed && t > tok0 ? C.green : '#fff', '#9DB3CF', 3);
+        if (passed && t > tok0) mark(0, 0, 26, true); else T('?', 0, 2, { s: 34, f: FONT_H, c: '#9DB3CF' });
+        T(lab, 0, 64, { s: 17 });
+      });
+    });
+    // percabangan peran
+    const fk = fin(t, L[2] + .3, 1);
+    const up = bz([880, 335], [1040, 175], -10), dn = bz([880, 335], [1040, 425], 10);
+    path(up, fk, C.navy, 6, null, true); path(dn, fk, C.teal, 6, null, true);
+    G(880, 335, pop(t, L[2], .5), () => { G(0, 0, 1, () => rr(-28, -28, 56, 56, 8, C.mustard), { rot: Math.PI / 4 }); T('Peran', 0, 1, { s: 13 }); });
+    const doors = [[1110, 175, '/admin', C.navy, 'Administrator'], [1110, 425, '/petugas', C.teal, 'Petugas']];
+    const open = fin(t, L[2] + 3.1, .5) * (1 - fin(t, L[3] + .3, .4)) + fin(t, L[3] + 2.1, .5);
+    doors.forEach(([dx, dy, path_, col, role], i) => {
+      G(dx, dy, pop(t, L[2] + .2 + i * .2, .5), () => {
+        rr(-62, -82, 124, 164, 12, '#2B2A4C');
+        const ow = i === 1 ? lerp(1, .25, clamp(open)) : 1;
+        rr(-56, -76, 112 * ow, 152, 8, col); circ(-56 + 112 * ow - 14, 4, 6, C.mustard);
+        pill(0, i === 0 ? -108 : 110, path_ + '/dashboard', '#fff', C.ink, 15, 12);
+        T(role, -56 + 56 * ow, -50, { s: 14, c: '#fff', max: 104 * ow + 1 });
+      });
+    });
+    // token pengguna
+    let tp = null;
+    if (t >= tok0 && t < L[2] + 1.8) tp = [tokX, 335];
+    else if (t >= L[2] + 1.8 && t < L[3] + .5) tp = along(dn, clamp((t - L[2] - 1.8) / 1.3));
+    else if (t >= L[3] + .5) {
+      const a = clamp((t - L[3] - .5) / .8), b = clamp((t - L[3] - 1.3) / .8);
+      tp = [1040, t < L[3] + 1.3 ? lerp(425, 262, E.inOut(a)) : lerp(262, 425, E.bounce(b))];
+    }
+    if (tp) G(tp[0], tp[1] + Math.sin(t * 8) * 3, 1, () => { circ(0, 0, 22, C.coral, '#fff', 4); icon('user', .7); });
+    if (t > L[3] + 1.2) {
+      const k = pop(t, L[3] + 1.3, .4), sh = Math.sin(t * 40) * 6 * (1 - pr(t, L[3] + 1.3, .6));
+      mark(1110 + sh, 175, 34, false, k);
+      G(720, 210, pop(t, L[3] + 2.1, .5), () => pill(0, 0, '↩ dikembalikan ke dashboard sendiri', C.coral, '#fff', 16, 14));
+    }
+  },
+},
+/* 5 ─ Dashboard */
+{
+  chapter: 'Langkah 2 · Dashboard', bg: '#E6F6EC', blob: '#D2EEDC', accent: C.mint,
+  lines: [
+    'Setelah masuk, kamu disambut Dashboard: ringkasan kondisi seluruh barang bukti.',
+    'Ada jumlah barang bukti, jumlah perkara, barang yang tersedia, dan barang yang sedang dipinjam.',
+    'Kalau ada pinjaman yang melewati tenggat, dashboard langsung memberi peringatan supaya segera ditindaklanjuti.',
+  ],
+  fx: L => [[.2, 'whoosh'], ...[0, 1, 2, 3].map(i => [L[1] + .2 + i * .4, 'pop']), [L[2] + .3, 'alarm'], [L[2] + 1.1, 'alarm']],
+  draw(t, L) {
+    const k = fin(t, .2, .7);
+    G(640, 312, lerp(.84, .92, k), () => {
+      ctx.translate(-640, -330);
+      shadowE(640, 600, 900, .1);
+      rr(110, 70, 1060, 520, 18, '#fff');
+      rr(110, 70, 1060, 40, [18, 18, 0, 0], '#ECE7DD');
+      [C.red, C.mustard, C.mint].forEach((c, i) => circ(140 + i * 22, 90, 7, c));
+      rr(420, 80, 440, 20, 10, '#fff'); T('siber-evidence / petugas / dashboard', 640, 91, { s: 12, w: 700, c: C.muted });
+      rr(110, 110, 200, 480, [0, 0, 0, 18], C.navy);
+      G(150, 145, .3, () => shield('#fff')); T('SIBER', 175, 140, { s: 16, al: 'left', c: '#fff', f: FONT_H }); T('EVIDENCE', 175, 158, { s: 11, al: 'left', c: 'rgba(255,255,255,.7)' });
+      ['Dashboard', 'Data Perkara', 'Barang Bukti', 'Riwayat', 'Laporan', 'Pengaturan'].forEach((m, i) => {
+        if (i === 0) rr(124, 190 + i * 46, 172, 36, 10, 'rgba(255,255,255,.16)');
+        T(m, 144, 208 + i * 46, { s: 15, al: 'left', w: 700, c: i ? 'rgba(255,255,255,.7)' : '#fff' });
+      });
+      T('Dashboard', 340, 140, { s: 24, al: 'left', f: FONT_H });
+      G(1120, 140, 1, () => {
+        const ring = t > L[2] + .3 ? Math.sin(t * 22) * .3 * (1 - pr(t, L[2] + .3, 1.6)) : 0;
+        G(0, 0, 1, () => { ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(0, -2, 11, Math.PI, 0); ctx.lineTo(13, 10); ctx.lineTo(-13, 10); ctx.closePath(); ctx.fill(); circ(0, 13, 4, C.ink); }, { rot: ring });
+        if (t > L[2] + .3) circ(10, -10, 7 * pop(t, L[2] + .3, .4), C.red);
+      });
+      const cards = [['Barang Bukti', 13, C.blue, 'bag'], ['Perkara', 7, C.indigo, 'folder'], ['Tersedia', 9, C.green, 'dash'], ['Dipinjam', 2, C.amber, 'move']];
+      cards.forEach(([lab, v, col, ic], i) => {
+        const kk = pop(t, L[1] + .2 + i * .4, .5), x = 340 + i * 204;
+        G(x + 94, 230, kk, () => {
+          rr(-94, -52, 188, 104, 14, '#F7F8FB', '#E6E9F0', 2);
+          G(-54, -8, 1, () => { circ(0, 0, 24, col); icon(ic, .75); });
+          T(String(Math.round(v * fin(t, L[1] + .3 + i * .4, 1.1))), -18, -12, { s: 38, f: FONT_H, al: 'left' });
+          T(lab, -18, 26, { s: 14, al: 'left', w: 700, c: C.muted });
+        });
+      });
+      A(fin(t, L[1] + 2, .5), () => {
+        T('Sebaran Status', 340, 318, { s: 16, al: 'left' });
+        [['Tersedia', 9, C.green], ['Dipinjam', 2, C.amber], ['Pemeriksaan', 1, C.blue], ['Dihancurkan', 1, C.red]].forEach(([n, v, c], i) => {
+          const y = 348 + i * 30; T(n, 340, y, { s: 13, al: 'left', w: 700, c: C.muted });
+          rr(450, y - 8, 260, 16, 8, '#EEF0F5'); rr(450, y - 8, 260 * v / 9 * fin(t, L[1] + 2.2 + i * .15, .8), 16, 8, c);
+        });
+        T('Aktivitas Terakhir', 760, 318, { s: 16, al: 'left' });
+        [['Peminjaman BB-2026-0004', C.amber], ['Perpindahan BB-2026-0002', C.indigo], ['Penerimaan BB-2026-0013', C.blue]].forEach(([n, c], i) => {
+          circ(770, 348 + i * 30, 6, c); T(n, 786, 348 + i * 30, { s: 13, al: 'left', w: 700, c: C.muted });
+        });
+      });
+      const ak = pop(t, L[2] + .3, .5), sh = Math.sin(t * 30) * 5 * (1 - pr(t, L[2] + .3, .8));
+      G(755 + sh, 500, ak, () => {
+        rr(-415, -38, 830, 76, 14, '#FDECEC', C.red, 2);
+        ctx.fillStyle = C.red; ctx.beginPath(); ctx.moveTo(-370, -20); ctx.lineTo(-348, 18); ctx.lineTo(-392, 18); ctx.closePath(); ctx.fill(); T('!', -370, 6, { s: 18, c: '#fff' });
+        T('Peminjaman Melewati Tenggat', -320, -10, { s: 19, al: 'left', c: C.red });
+        T('1 barang belum dikembalikan setelah tanggal harapan kembali', -320, 14, { s: 14, al: 'left', w: 700, c: '#A3393C' });
+        pill(330, 0, 'Tindak lanjuti', C.red, '#fff', 14, 12);
+      });
+    });
+  },
+},
+/* 6 ─ Perkara */
+{
+  chapter: 'Langkah 3 · Data Perkara', bg: '#FFEDE2', blob: '#FFDFCD', accent: C.mustard,
+  lines: [
+    'Setiap barang bukti selalu berawal dari sebuah perkara, yaitu Laporan Polisi.',
+    'Petugas menambahkan perkara: nomor LP, tanggal laporan, uraian, tahap Lidik atau Sidik, dan penyidiknya.',
+    'Nomor LP ini harus unik. Kalau nomornya sudah terdaftar, sistem langsung menolaknya.',
+  ],
+  fx: L => [[.3, 'whoosh'], [1.0, 'pop'], [L[1] + .3, 'pop'], ...[0, 1, 2, 3, 4].map(i => [L[1] + .7 + i * 1.05, 'tick']), [L[2] - 1.3, 'click'], [L[2] - 1.1, 'whoosh'], [L[2] - .35, 'ding'], [L[2] + .8, 'whoosh'], [L[2] + 1.6, 'error']],
+  draw(t, L) {
+    const mv = fio(t, L[1], .7);
+    const fx = lerp(560, 175, mv), fy = lerp(320, 250, mv), fs = lerp(1.45, .75, mv);
+    const inX = fio(t, .3, .7);
+    shadowE(lerp(-200, fx, inX), fy + 110 * fs, 200 * fs);
+    G(lerp(-200, fx, inX), fy, fs, () => folder('LAPORAN POLISI', 'LP/87/IX/2026', C.mustard), { rot: (1 - inX) * -.4 });
+    A(1 - fin(t, L[1], .4), () => person(900, 580, pop(t, 1.0, .6) * 1, { ...PETUGAS, pose: 'point', t }));
+    // formulir
+    const dim = 1 - .6 * fin(t, L[2], .4);
+    A(dim, () => G(560, 335, pop(t, L[1] + .3, .6), () => {
+      rr(-240, -230, 480, 460, 22, '#fff');
+      T('Tambah Perkara', -208, -196, { s: 22, al: 'left', f: FONT_H });
+      const rows = [['Nomor LP', 'LP/87/IX/2026/Ditreskrimsus'], ['Tanggal Laporan', '08 September 2026'], ['Uraian', 'Penipuan jual beli daring'], ['Tahap', null], ['Penyidik', 'Penyidik Unit Siber']];
+      rows.forEach(([lab, val], i) => {
+        const y = -150 + i * 64, st = L[1] + .7 + i * 1.05;
+        T(lab, -208, y, { s: 13, al: 'left', c: C.muted });
+        if (val) {
+          rr(-208, y + 10, 416, 36, 9, '#F7F8FB', t > st ? C.mustard : '#E3E6EE', 2);
+          T(val.slice(0, Math.floor(val.length * pr(t, st, .7))), -196, y + 29, { s: 16, al: 'left', w: 700 });
+        } else {
+          const on = t > st;
+          rr(-208, y + 10, 100, 36, 18, '#F1F2F6'); T('Lidik', -158, y + 29, { s: 15, c: C.muted });
+          rr(-98, y + 10, 100, 36, 18, on ? C.indigo : '#F1F2F6'); T('Sidik', -48, y + 29, { s: 15, c: on ? '#fff' : C.muted });
+        }
+      });
+      const press = 1 - .08 * Math.sin(Math.PI * pr(t, L[2] - 1.3, .25));
+      G(0, 190, press, () => { rr(-208, -22, 416, 44, 12, C.navy); T('Simpan Perkara', 0, 1, { s: 18, c: '#fff' }); });
+    }));
+    // basis data
+    G(1040, 360, pop(t, L[1] + .5, .6), () => { shadowE(0, 130, 220); cabinet(); pill(0, -150, 'Data Perkara', C.ink, '#fff', 15, 12); });
+    const fl = pr(t, L[2] - 1.1, .7);
+    if (fl > 0 && fl < 1) { const p = along(bz([560, 140], [1040, 300], 120), E.inOut(fl)); G(p[0], p[1], lerp(.6, .35, fl), () => folder('LP/87', '', C.mustard), { rot: fl * .5 }); }
+    G(1040, 160, pop(t, L[2] - .35, .4) * (1 - fin(t, L[2] + .6, .3)), () => pill(0, 0, '✓ Perkara tersimpan', C.green, '#fff', 15, 12));
+    // nomor LP ganda
+    if (t > L[2] + .7) {
+      const a = pr(t, L[2] + .7, .9), b = pr(t, L[2] + 1.6, .8);
+      const x = b > 0 ? lerp(940, 760, E.out(b)) : lerp(-150, 940, E.inOut(a));
+      const y = b > 0 ? 380 - Math.sin(b * Math.PI) * 80 : 380;
+      G(x, y, .7, () => folder('LAPORAN POLISI', 'LP/87/IX/2026', '#FFCF7A', '#E6A94A'), { rot: b * -.35 });
+      mark(x, y - 20, 42, false, pop(t, L[2] + 1.6, .4));
+      G(760, 520, pop(t, L[2] + 1.9, .5), () => pill(0, 0, 'Nomor LP sudah terdaftar', C.red, '#fff', 18, 16));
+    }
+  },
+},
+/* 7 ─ Barang bukti */
+{
+  chapter: 'Langkah 4 · Barang Bukti', bg: '#F0EAFF', blob: '#E3D9FB', accent: C.lilac,
+  lines: [
+    'Berikutnya, barang buktinya didaftarkan dan dihubungkan ke perkara tadi.',
+    'Kodenya dibuat otomatis, misalnya BB-2026-0001, lengkap dengan kategori, nomor seri, kondisi, dan lokasi simpannya.',
+    'Datanya belum lengkap? Simpan sebagai Draf dulu. Draf belum masuk riwayat, dan belum dihitung di laporan.',
+    'Kalau sudah lengkap, tekan Simpan dan Daftarkan. Sistem otomatis mencatat riwayat pertamanya: Penerimaan.',
+  ],
+  fx: L => [[.2, 'pop'], [.5, 'pop'], [1.4, 'pop'], [L[1] + .2, 'pop'], ...[0, 1, 2, 3, 4].map(i => [L[1] + 1.8 + i * .55, 'tick']), [L[2] + .2, 'whoosh'], [L[2] + 1.2, 'pop'], [L[3] + .5, 'click'], [L[3] + 1.1, 'stamp'], [L[3] + 1.8, 'ding']],
+  draw(t, L) {
+    G(165, 260, pop(t, .2, .5), () => folder('LP/87/IX/2026', 'Perkara', C.mustard), {});
+    const bx = 470, by = 290 + Math.sin(t * 2) * 4;
+    shadowE(bx, 420, 170);
+    bag(bx, by, pop(t, .5, .6) * .95);
+    path(bz([262, 250], [395, 250], 50), fin(t, .9, .8), C.coral, 5, [10, 9]);
+    G(330, 175, pop(t, 1.4, .5), () => pill(0, 0, 'terhubung ke perkara', C.coral, '#fff', 14, 12));
+    // label kode
+    G(bx, 470, pop(t, L[1] + .2, .5), () => {
+      path([[0, -70], [0, -30]], 1, C.ink, 3);
+      rr(-110, -30, 220, 52, 12, '#fff', C.ink, 3); circ(-88, -4, 7, C.lilac);
+      const code = 'BB-2026-0001';
+      T(code.slice(0, Math.floor(code.length * pr(t, L[1] + .5, 1))), -70, -3, { s: 22, al: 'left', f: FONT_H });
+    });
+    // kartu data → panel pilihan
+    const swap = fin(t, L[2], .5);
+    A(1 - swap, () => G(950, 300, pop(t, L[1] + 1.2, .5), () => {
+      rr(-240, -200, 480, 400, 22, '#fff');
+      T('Data Barang Bukti', -206, -164, { s: 22, al: 'left', f: FONT_H });
+      [['Nama', 'Laptop Merk A Warna Hitam'], ['Kategori', 'Elektronik'], ['Nomor Seri', 'SN-A1B2C3D4'], ['Kondisi', 'Baik'], ['Lokasi', 'Ruang BB — Rak A2']].forEach(([a, b], i) => {
+        const kk = pop(t, L[1] + 1.8 + i * .55, .4), y = -108 + i * 60;
+        A(kk, () => { rr(-206, y - 22, 412, 48, 10, '#F7F6FC'); T(a, -190, y + 2, { s: 14, al: 'left', c: C.muted }); T(b, 190, y + 2, { s: 16, al: 'right' }); });
+      });
+    }));
+    if (t > L[2] - .1) {
+      const selA = t < L[3] + .3, kA = pop(t, L[2] + .1, .5), kB = pop(t, L[2] + .35, .5);
+      G(830, 300, kA, () => {
+        A(selA ? 1 : .45, () => {
+          rr(-120, -190, 240, 380, 20, '#fff', selA ? C.slate : '#E3E0EC', selA ? 5 : 2);
+          T('Simpan sebagai', 0, -154, { s: 16, c: C.muted }); T('Draf', 0, -126, { s: 30, f: FONT_H, c: C.slate });
+          bag(0, -20, .55, { ghost: true, label: 'DRAF' });
+          mark(-82, 96, 12, false); T('Belum masuk riwayat', -62, 96, { s: 14, al: 'left' });
+          mark(-82, 132, 12, false); T('Belum di laporan', -62, 132, { s: 14, al: 'left' });
+        });
+      });
+      const selB = t > L[3] + .3, press = 1 - .06 * Math.sin(Math.PI * pr(t, L[3] + .5, .25));
+      G(1080, 300, kB * press, () => {
+        A(selB ? 1 : .55, () => {
+          rr(-120, -190, 240, 380, 20, C.navy, selB ? C.mustard : null, 5);
+          T('Simpan &', 0, -154, { s: 16, c: 'rgba(255,255,255,.75)' }); T('Daftarkan', 0, -126, { s: 30, f: FONT_H, c: '#fff' });
+          G(0, -20, .55, () => { miniLaptop(); bagShell(); });
+          if (t > L[3] + 1.7) {
+            const k = fin(t, L[3] + 1.7, .5);
+            A(k, () => { circ(-84, 96, 9, C.blue); rr(-86, 104, 4, 30, 2, 'rgba(255,255,255,.3)'); T('Riwayat #1', -66, 96, { s: 14, al: 'left', c: '#fff' }); T('Penyerahan Penyidik → Rak A2', -84, 140, { s: 11, al: 'left', w: 700, c: 'rgba(255,255,255,.75)' }); });
+          }
+        });
+        const st = pr(t, L[3] + 1.1, .3);
+        if (st > 0) G(0, 30, lerp(2.2, 1, E.out(st)), () => { rr(-96, -26, 192, 52, 8, 'rgba(255,255,255,.92)', C.blue, 5); T('PENERIMAAN', 0, 2, { s: 26, f: FONT_H, c: C.blue }); }, { rot: -.16, a: st });
+      });
+      if (selA && t > L[2] + .8) { const g = fio(t, L[2] + .8, .8); bag(lerp(bx, 830, g), lerp(by, 280, g), lerp(.95, .4, g) * (1 - pr(t, L[2] + 1.55, .1)), { ghost: true, label: 'DRAF', a: .9 }); }
+    }
+  },
+},
+/* 8 ─ Perpindahan */
+{
+  chapter: 'Langkah 5 · Perpindahan', bg: '#E3F3FF', blob: '#CFE8FB', accent: C.teal,
+  lines: [
+    'Barang bukti tidak diam di satu tempat. Ia bisa dipindah, dipinjam, diperiksa, lalu dikembalikan.',
+    'Setiap gerakan dicatat sebagai kejadian, dan status barangnya ikut berubah secara otomatis.',
+    'Dipinjam tim forensik? Statusnya jadi Dipinjam, dan wajib ada tanggal harapan kembali.',
+    'Sudah dikembalikan? Status kembali Tersedia. Dialihkan ke pemusnahan? Statusnya menjadi Dihancurkan.',
+  ],
+  fx: L => [...[0, 1, 2, 3].map(i => [.3 + i * .3, 'pop']), [L[1] + .3, 'whoosh'], [L[1] + 1.8, 'tick'], [L[2] + .2, 'whoosh'], [L[2] + 1.6, 'ding'], [L[2] + 1.9, 'pop'], [L[3] + .2, 'whoosh'], [L[3] + 1.4, 'ding'], [L[3] + 4.0, 'whoosh'], [L[3] + 5.4, 'stamp']],
+  draw(t, L) {
+    const S = { A: [170, 510], B: [450, 365], C: [800, 510], D: [1110, 365] };
+    const roads = [bz(S.A, S.B, 60), bz(S.B, S.C, 60), bz(S.B, S.D, 170)];
+    roads.forEach((r, i) => path(r.map(p => [p[0], p[1] - 40]), fin(t, 1.2 + i * .25, .8), 'rgba(43,42,76,.22)', 6, [3, 14]));
+    const st = [['A', 'Rak A2', '#FFD58A', 'shelf'], ['B', 'Lemari Kunci 01', '#A0E7C8', 'lock'], ['C', 'Ruang Forensik', '#B9C8FF', 'scope'], ['D', 'Pemusnahan', '#FFB4A8', 'fire']];
+    st.forEach(([k, n, c, kind], i) => G(S[k][0], S[k][1], pop(t, .3 + i * .3, .5), () => station(n, c, kind, t)));
+    const moves = [
+      { from: 'A', to: 'B', s: L[1] + .3, d: 1.5, lab: 'Perpindahan', col: C.indigo, st: 'Tersedia', sc: C.green },
+      { from: 'B', to: 'C', s: L[2] + .2, d: 1.4, lab: 'Peminjaman', col: C.amber, st: 'Dipinjam', sc: C.amber },
+      { from: 'C', to: 'B', s: L[3] + .2, d: 1.2, lab: 'Pengembalian', col: C.green, st: 'Tersedia', sc: C.green },
+      { from: 'B', to: 'D', s: L[3] + 4.0, d: 1.4, lab: 'Pengalihan', col: C.slate, st: 'Dihancurkan', sc: C.red },
+    ];
+    const top = p => [p[0], p[1] - 190];
+    let pos = top(S.A), status = ['Tersedia', C.green];
+    moves.forEach(m => {
+      if (t >= m.s) {
+        const k = clamp((t - m.s) / m.d), pts = bz(top(S[m.from]), top(S[m.to]), m.to === 'D' ? 170 : 70);
+        pos = along(pts, E.inOut(k));
+        if (k >= 1) status = [m.st, m.sc];
+        const mid = along(pts, .5);
+        G(mid[0], mid[1] - 34, pop(t, m.s + .2, .5), () => pill(0, 0, m.lab, m.col, '#fff', 14, 12), { a: t > m.s + m.d + 1.2 ? .55 : 1 });
+        const fl = pr(t, m.s + m.d, 1.2);
+        if (fl > 0 && fl < 1) A(1 - fl, () => T('+1 riwayat', pos[0] + 70, pos[1] - 40 - fl * 40, { s: 16, c: C.ink }));
+      }
+    });
+    const destroyed = status[0] === 'Dihancurkan';
+    G(pos[0], pos[1] + Math.sin(t * 3) * 4, pop(t, .5, .5) * .62, () => { miniLaptop(); bagShell(); if (destroyed) mark(0, -10, 50, false, pop(t, moves[3].s + moves[3].d, .4)); });
+    G(pos[0], pos[1] - 88, pop(t, .9, .4), () => pill(0, 0, status[0], status[1], '#fff', 15, 12));
+    const cal = pop(t, L[2] + 1.9, .5);
+    G(940, 290, cal, () => { calendar('20', 'NOV'); T('harapan kembali', 0, 66, { s: 13, c: C.muted }); if (t > L[3] + 1.4) mark(34, -34, 16, true, pop(t, L[3] + 1.4, .4)); });
+  },
+},
+/* 9 ─ Riwayat */
+{
+  chapter: 'Riwayat = Rantai Jejak', bg: '#FFF4DC', blob: '#FFE9BF', accent: C.amber,
+  lines: [
+    'Semua kejadian itu tersusun menjadi riwayat, seperti rantai yang tidak boleh putus.',
+    'Riwayat tidak bisa diubah atau dihapus. Kalau ada salah catat, buat saja kejadian koreksi yang baru.',
+    'Dengan begitu, jejak setiap barang bukti selalu bisa dipertanggungjawabkan.',
+  ],
+  fx: L => [...[0, 1, 2, 3, 4].map(i => [.5 + i * .5, 'clink']), [L[1] + .3, 'whoosh'], [L[1] + 1.2, 'error'], [L[1] + 3.6, 'clink'], [L[2] + .3, 'ding']],
+  draw(t, L) {
+    const ev = [['Penerimaan', C.blue], ['Perpindahan', C.indigo], ['Peminjaman', C.amber], ['Pengembalian', C.green], ['Pemeriksaan', C.violet], ['Koreksi', C.slate]];
+    const cy = 320;
+    ev.forEach(([n, c], i) => {
+      const st = i < 5 ? .5 + i * .5 : L[1] + 3.6, k = pop(t, st, .5), x = 640 + (i - 2.5) * 150;
+      if (i < 5) { const nk = fin(t, .5 + (i + 1) * .5, .4); if (i < 4 || t > L[1] + 3.6) { } }
+      G(x, cy + Math.sin(t * 2 + i) * 3, k, () => {
+        ctx.lineWidth = 20; ctx.strokeStyle = c;
+        ctx.beginPath(); ctx.roundRect(-92, -46, 184, 92, 46); ctx.stroke();
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); ctx.roundRect(-84, -40, 120, 30, 15); ctx.stroke();
+      });
+      G(x, cy + 96, k, () => { pill(0, 0, n, c, '#fff', 14, 11); });
+      if (i === 5) G(x, cy - 92, pop(t, st + .3, .4), () => pill(0, 0, '+ kejadian baru', C.ink, '#fff', 13, 10));
+    });
+    if (t > L[1] + .2) {
+      const a = fio(t, L[1] + .3, .9), back = fio(t, L[1] + 2.1, .6);
+      const ex = lerp(1000, 580, a) + back * 460, ey = lerp(120, 250, a) - back * 140;
+      const sh = t > L[1] + 1.2 && t < L[1] + 2.1 ? Math.sin(t * 50) * 6 : 0;
+      G(ex + sh, ey, 1 - pr(t, L[1] + 2.4, .3), () => eraser(), { rot: -.5 });
+      const lk = pop(t, L[1] + 1.2, .4) * (1 - fin(t, L[2] - .2, .4));
+      G(565, cy - 4, lk, () => { circ(0, 0, 44, '#fff'); G(0, 4, 1, () => lock(C.mustard)); });
+      G(565, 170, pop(t, L[1] + 1.4, .4) * (1 - fin(t, L[1] + 3.4, .3)), () => pill(0, 0, 'Tidak bisa diubah atau dihapus', C.red, '#fff', 16, 14));
+    }
+    G(640, 150, pop(t, L[2] + .3, .6), () => { G(0, 0, 1.1, () => shield(C.green, 'check')); });
+    A(fin(t, L[2] + .8, .5), () => T('Jejak bisa dipertanggungjawabkan', 640, 500, { s: 28, f: FONT_H }));
+    [[480, 120], [800, 120], [400, 210], [880, 210]].forEach(([x, y], i) => sparkle(x, y, pop(t, L[2] + .5 + i * .1, .4) * .8, [C.mustard, C.coral, C.teal, C.lilac][i], t + i));
+  },
+},
+/* 10 ─ Laporan */
+{
+  chapter: 'Langkah 6 · Laporan', bg: '#FFEDE8', blob: '#FFDCD3', accent: C.coral,
+  lines: [
+    'Butuh laporan? Pilih jenisnya: rekap per kategori, per perkara, status penyimpanan, riwayat perpindahan, atau peminjaman.',
+    'Atur periode dan filternya, lalu cetak di kertas A4 lengkap dengan kop, atau ekspor ke CSV untuk dibuka di Excel.',
+  ],
+  fx: L => [...[0, 1, 2, 3, 4].map(i => [.6 + i * .5, 'pop']), [L[1] + .3, 'pop'], [L[1] + .6, 'pop'], [L[1] + 1.4, 'print'], [L[1] + 4.4, 'pop'], [L[1] + 5.2, 'whoosh'], [L[1] + 5.9, 'ding']],
+  draw(t, L) {
+    const sh = fio(t, L[1], .7);
+    const cx = lerp(640, 250, sh), cyy = lerp(420, 440, sh), cs = lerp(1, .72, sh);
+    const reps = [['Rekap', 'per Kategori', C.blue], ['Per', 'Perkara', C.indigo], ['Status', 'Penyimpanan', C.green], ['Riwayat', 'Perpindahan', C.amber], ['Laporan', 'Peminjaman', C.coral]];
+    reps.forEach(([a, b, c], i) => {
+      const k = pop(t, .6 + i * .5, .5), ang = (i - 2) * .26;
+      G(cx, cyy, cs * k, () => {
+        ctx.rotate(ang); ctx.translate(0, -150);
+        rr(-80, -110, 160, 210, 14, '#fff', '#EADFD8', 2);
+        rr(-80, -110, 160, 34, [14, 14, 0, 0], c);
+        for (let j = 0; j < 4; j++) rr(-56 + j * 30, 40 - (j * 17 + 20) % 60, 20, (j * 17 + 20) % 60 + 10, 4, c);
+        T(a, 0, -40, { s: 17 }); T(b, 0, -16, { s: 15, w: 700, c: C.muted });
+      });
+    });
+    [['Periode: Sep–Nov 2026', C.ink], ['Kategori: Semua', C.ink]].forEach(([s, c], i) => G(560 + i * 250, 70, pop(t, L[1] + .3 + i * .3, .4), () => pill(0, 0, s, '#fff', c, 15, 14)));
+    G(690, 300, pop(t, L[1] + .9, .5), () => {
+      printer(fin(t, L[1] + 1.4, 2.4), () => {
+        G(-50, 26, .2, () => shield(C.navy)); rr(-30, 18, 92, 6, 3, C.ink); rr(-30, 30, 70, 5, 3, '#C9C3D9');
+        rr(-62, 46, 124, 3, 1, C.ink);
+        for (let j = 0; j < 6; j++) { rr(-62, 62 + j * 20, 124, 14, 3, j % 2 ? '#F3F1F8' : '#fff'); rr(-58, 66 + j * 20, 40, 6, 3, '#C9C3D9'); rr(-4, 66 + j * 20, 30, 6, 3, '#C9C3D9'); }
+      });
+      A(fin(t, L[1] + 3.6, .4), () => pill(0, -160, 'Cetak A4 + kop', C.navy, '#fff', 15, 12));
+    });
+    const ck = pop(t, L[1] + 4.4, .5);
+    G(970, 320, ck, () => csvDoc());
+    path([[1030, 310], [1080, 290]], fin(t, L[1] + 5.2, .5), C.green, 5, null, true);
+    G(1150, 280, pop(t, L[1] + 5.6, .5), () => excelSheet());
+    A(fin(t, L[1] + 5.9, .4), () => pill(1060, 430, 'Ekspor CSV → Excel', C.green, '#fff', 15, 12));
+  },
+},
+/* 11 ─ Administrator */
+{
+  chapter: 'Khusus Administrator', bg: '#EAEDFA', blob: '#DADFF5', accent: C.navy,
+  lines: [
+    'Lalu, apa bedanya Administrator?',
+    'Hanya Administrator yang bisa menghapus data, mengelola akun pengguna, dan mengatur kategori serta lokasi penyimpanan.',
+    'Akun pengguna tidak dihapus, cukup dinonaktifkan, supaya jejak siapa yang mencatat tetap utuh.',
+  ],
+  fx: L => [[.2, 'pop'], [.8, 'pop'], [L[1] + .2, 'whoosh'], ...[0, 1, 2, 3, 4].map(i => [L[1] + .6 + i * .75, 'tick']), [L[2] + .3, 'pop'], [L[2] + 2.0, 'click']],
+  draw(t, L) {
+    person(190, 580, pop(t, .2, .6), { ...ADMIN, pose: t < L[1] ? 'scratch' : 'point', mood: t < L[1] ? 'o' : 'smile', t });
+    G(290, 210, pop(t, .8, .5) * (1 - fin(t, L[1], .3)), () => { rr(-46, -40, 92, 80, 26, '#fff'); T('?', 0, 4, { s: 56, f: FONT_H, c: C.navy }); });
+    const out = fin(t, L[2], .4);
+    A(1 - out, () => G(770, 330, pop(t, L[1] + .2, .6), () => {
+      rr(-390, -220, 780, 440, 22, '#fff');
+      rr(-390, -220, 780, 64, [22, 22, 0, 0], C.navy);
+      T('Fitur', -360, -188, { s: 18, c: '#fff', al: 'left' }); T('Petugas', 170, -188, { s: 18, c: '#fff' }); T('Admin', 300, -188, { s: 18, c: '#fff' });
+      const rows = [['Catat perkara & barang bukti', 1], ['Catat perpindahan & laporan', 1], ['Hapus data', 0], ['Kelola akun pengguna', 0], ['Master data kategori & lokasi', 0]];
+      rows.forEach(([n, p], i) => {
+        const k = pop(t, L[1] + .6 + i * .75, .4), y = -118 + i * 66;
+        A(k, () => { if (i % 2) rr(-380, y - 30, 760, 60, 10, '#F5F6FB'); T(n, -360, y, { s: 19, al: 'left' }); });
+        mark(170, y, 18, !!p, k); mark(300, y, 18, true, k);
+      });
+    }));
+    if (t > L[2]) {
+      const users = [['Petugas A', 1], ['Petugas B', 0], ['Petugas C', 1]];
+      const off = fio(t, L[2] + 2.0, .5);
+      users.forEach(([n, a], i) => {
+        const x = 540 + i * 230, gray = a ? 0 : off;
+        G(x, 320, pop(t, L[2] + .3 + i * .15, .5), () => {
+          rr(-100, -130, 200, 260, 20, '#fff', gray > .5 ? '#D3D6E0' : null, 2);
+          A(1 - .55 * gray, () => { circ(0, -60, 38, gray > .5 ? '#B8BCC8' : C.uni); G(0, -58, 1.3, () => icon('user', 1)); T(n, 0, 4, { s: 20, f: FONT_H }); T('Petugas', 0, 30, { s: 14, w: 700, c: C.muted }); });
+          const on = 1 - gray;
+          rr(-30, 62, 60, 30, 15, on > .5 ? C.green : '#C4C8D4'); circ(lerp(-15, 15, on), 77, 12, '#fff');
+          T(on > .5 ? 'Aktif' : 'Nonaktif', 0, 112, { s: 14, c: on > .5 ? C.green : C.red });
+        });
+      });
+      G(770, 520, pop(t, L[2] + 2.6, .5), () => pill(0, 0, 'Dinonaktifkan, bukan dihapus → jejak tetap utuh', C.navy, '#fff', 16, 14));
+    }
+  },
+},
+/* 12 ─ Rangkuman */
+{
+  chapter: 'Rangkuman', bg: '#FFF2DB', blob: '#FFE5BA', accent: C.coral, tail: 3,
+  lines: [
+    'Jadi, alurnya begini: masuk lewat login, pantau dashboard, catat perkara, lalu daftarkan barang buktinya.',
+    'Setiap perpindahan dicatat, dan akhirnya dibuat laporannya.',
+    'Itulah cara SIBER EVIDENCE memastikan setiap barang bukti selalu jelas: ada di mana, dan di tangan siapa.',
+  ],
+  fx: L => [...[0, 1, 2, 3].map(i => [L[0] + .6 + i * 1.4, 'pop']), [L[1] + .3, 'pop'], [L[1] + 1.8, 'pop'], [L[2] + .3, 'whoosh'], [L[2] + .9, 'ding']],
+  draw(t, L) {
+    const nodes = [['Login', 'lock', C.sky], ['Dashboard', 'dash', C.mint], ['Perkara', 'folder', C.mustard], ['Barang Bukti', 'bag', C.lilac], ['Perpindahan', 'move', C.teal], ['Laporan', 'print', C.coral]];
+    const times = [L[0] + .6, L[0] + 2, L[0] + 3.4, L[0] + 4.8, L[1] + .3, L[1] + 1.8];
+    const up = fio(t, L[2], .8);
+    const pos = nodes.map((_, i) => [lerp(170 + i * 188, 340 + i * 120, up), lerp(i % 2 ? 380 : 250, 96, up)]);
+    const ns = lerp(1, .55, up);
+    for (let i = 0; i < 5; i++) path([pos[i], pos[i + 1]], fin(t, times[i + 1] - .5, .5), '#C9B999', 6 * ns, [2, 12]);
+    nodes.forEach(([n, ic, c], i) => G(pos[i][0], pos[i][1], pop(t, times[i], .5) * ns, () => {
+      circ(0, 0, 54, c); circ(0, 0, 54, null, '#fff', 5); icon(ic, 1.3);
+      circ(-40, -40, 15, C.ink); T(String(i + 1), -40, -39, { s: 16, c: '#fff' });
+      A(1 - up, () => T(n, 0, 84, { s: 20, f: FONT_H }));
+    }));
+    if (t > L[2]) {
+      G(640, 300, pop(t, L[2] + .5, .6), () => {
+        G(-250, 0, .85, () => shield(C.navy));
+        T('SIBER', -175, -18, { s: 76, f: FONT_H, c: C.navy, al: 'left' });
+        T('EVIDENCE', 50, -18, { s: 76, f: FONT_H, c: C.coral, al: 'left' });
+        T('Jelas di mana. Jelas di tangan siapa.', -175, 44, { s: 26, w: 800, c: C.muted, al: 'left' });
+      });
+      person(180, 600, pop(t, L[2] + .9, .6) * .85, { ...PETUGAS, pose: 'wave', t });
+      person(1100, 600, pop(t, L[2] + 1.1, .6) * .85, { ...ADMIN, pose: 'wave', t: t + 1 });
+      [[420, 200, C.mustard], [880, 420, C.teal], [960, 210, C.lilac], [360, 430, C.coral]].forEach(([x, y, c], i) => sparkle(x, y, pop(t, L[2] + 1 + i * .12, .4), c, t + i));
+    }
+  },
+},
+];
+
+/* ---------- penjadwalan waktu ---------- */
+const lineDur = s => clamp(s.length / 14.5 + 1.0, 3, 9.5);
+let TOTAL = 0; const EVENTS = [];
+SC.forEach((s, idx) => {
+  s.L = []; s.D = []; let acc = .5;
+  s.lines.forEach(l => { s.L.push(acc); const d = lineDur(l); s.D.push(d); acc += d; });
+  s.dur = acc + .6 + (s.tail || 0); s.start = TOTAL; TOTAL += s.dur;
+  s.fx(s.L).forEach(([tt, k]) => EVENTS.push([s.start + tt, k]));
+});
+EVENTS.sort((a, b) => a[0] - b[0]);
+const POSTER = SC[1].start + SC[1].L[2] + 3.2;
+const sceneAt = t => { for (let i = SC.length - 1; i >= 0; i--) if (t >= SC[i].start) return i; return 0; };
+
+/* ---------- render satu frame ---------- */
+function render(t) {
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  const si = sceneAt(t), s = SC[si], lt = t - s.start;
+  bg(s.bg, s.blob);
+  ctx.save(); s.draw(lt, s.L, s); ctx.restore();
+  // label bab
+  G(28, 30, pop(lt, .15, .5), () => {
+    const w = tw(s.chapter, 16, 800) + 30;
+    rr(0, -18, w, 36, 18, 'rgba(43,42,76,.88)'); T(s.chapter, 15, 1, { s: 16, al: 'left', c: '#fff' });
+  });
+  T('SIBER EVIDENCE', W - 28, 30, { s: 15, al: 'right', c: 'rgba(43,42,76,.45)', f: FONT_H });
+  // transisi lingkaran
+  const R = 780; let wr = 0, wc = null;
+  if (si < SC.length - 1 && lt > s.dur - .4) { wr = E.inOut(pr(lt, s.dur - .4, .4)) * R; wc = SC[si + 1].accent; }
+  if (si > 0 && lt < .4) { wr = (1 - E.inOut(pr(lt, 0, .4))) * R; wc = s.accent; }
+  if (wr > 0) circ(640, 360, wr, wc);
+  // subtitle
+  let li = -1;
+  s.L.forEach((st, i) => { if (lt >= st && lt < st + s.D[i]) li = i; });
+  if (li >= 0) {
+    const k = fin(lt, s.L[li], .25), lines = wrapText(s.lines[li], 1000, 25, 700);
+    const lh = 34, h = lines.length * lh + 24, w = Math.max(...lines.map(l => tw(l, 25, 700))) + 48;
+    A(k, () => {
+      rr(640 - w / 2, 690 - h, w, h, 16, 'rgba(26,25,46,.82)');
+      lines.forEach((l, i) => T(l, 640, 690 - h + 12 + lh / 2 + i * lh + 1, { s: 25, w: 700, c: '#fff' }));
+    });
+  }
+  if (!grainPat) grainPat = ctx.createPattern(grain, 'repeat');
+  ctx.fillStyle = grainPat; ctx.fillRect(0, 0, W, H);
+  return li >= 0 ? `${si}:${li}` : null;
+}
+
+/* =========================================================
+   AUDIO: efek suara + musik latar (WebAudio)
+   X = tujuan penjadwalan saat ini: konteks langsung (AC) atau
+   OfflineAudioContext saat ekspor, X.at = waktu mulai (detik).
+   ========================================================= */
+let AC = null, master, recDest, LIVE = null, X = null;
+function makeNoise(ac) {
+  const b = ac.createBuffer(1, Math.floor(ac.sampleRate * .6), ac.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return b;
+}
+function initAudio() {
+  if (AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  master = AC.createGain(); master.gain.value = .8; master.connect(AC.destination);
+  recDest = AC.createMediaStreamDestination(); master.connect(recDest);
+  LIVE = { ac: AC, out: master, nb: makeNoise(AC), at: 0 };
+}
+function tone(type, f0, f1, dur, vol, when = 0) {
+  const ac = X.ac, t0 = X.at + when, o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t0); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + .01); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  o.connect(g); g.connect(X.out); o.start(t0); o.stop(t0 + dur + .05);
+}
+function noise(dur, vol, f0, f1, q = 1, when = 0) {
+  const ac = X.ac, t0 = X.at + when, src = ac.createBufferSource(), bp = ac.createBiquadFilter(), g = ac.createGain();
+  src.buffer = X.nb; bp.type = 'bandpass'; bp.Q.value = q; bp.frequency.setValueAtTime(f0, t0); bp.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + dur * .3); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  src.connect(bp); bp.connect(g); g.connect(X.out); src.start(t0); src.stop(t0 + dur + .05);
+}
+function hat(when = 0) {
+  const ac = X.ac, t0 = X.at + when, src = ac.createBufferSource(), g = ac.createGain(), hp = ac.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 6000; src.buffer = X.nb;
+  g.gain.setValueAtTime(.05, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + .06);
+  src.connect(hp); hp.connect(g); g.connect(X.out); src.start(t0); src.stop(t0 + .1);
+}
+const SFX = {
+  pop: () => tone('sine', 520, 1100, .12, .22),
+  tick: () => tone('triangle', 1500, 1900, .06, .14),
+  key: () => noise(.04, .2, 3000, 2500, 2),
+  click: () => { tone('square', 900, 600, .04, .08); noise(.03, .2, 2000, 1500, 3); },
+  whoosh: () => noise(.4, .28, 300, 2400, .8),
+  drop: () => tone('sine', 220, 90, .16, .3),
+  stamp: () => { tone('sine', 160, 50, .25, .5); noise(.12, .3, 800, 200, 1); },
+  ding: () => { tone('sine', 1320, 0, .7, .16); tone('sine', 1980, 0, .5, .08, .02); },
+  error: () => { tone('square', 240, 0, .14, .09); tone('square', 180, 0, .2, .09, .15); },
+  alarm: () => { tone('triangle', 880, 0, .12, .14); tone('triangle', 660, 0, .14, .14, .14); },
+  clink: () => { tone('triangle', 2400, 0, .18, .1); tone('sine', 3200, 0, .12, .06, .01); },
+  print: () => { for (let i = 0; i < 10; i++) noise(.08, .12, 1200, 900, 4, i * .09); },
+};
+function playSfx(k) { if (!AC || !musicOn.checked) return; X = LIVE; X.at = AC.currentTime; (SFX[k] || SFX.pop)(); }
+
+/* musik latar: progresi I–vi–IV–V, petikan lembut */
+const CH = [[60, 64, 67, 72], [57, 60, 64, 69], [53, 57, 60, 65], [55, 59, 62, 67]];
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const SPB = 60 / 96 / 2;
+function musicStep(st, when) {
+  const ch = CH[Math.floor(st / 8) % 4], idx = [0, 1, 2, 3, 2, 1, 2, 3][st % 8];
+  tone('triangle', mtof(ch[idx] + 12), 0, .35, .035, when);
+  if (st % 4 === 0) tone('sine', mtof(ch[0] - 12), 0, .6, .07, when);
+  if (st % 8 === 4) hat(when);
+}
+let nextNote = 0, step = 0;
+function musicTick() {
+  if (!AC || !playing || !musicOn.checked) { nextNote = AC ? AC.currentTime + .05 : 0; return; }
+  if (nextNote < AC.currentTime) nextNote = AC.currentTime + .05;
+  X = LIVE; X.at = AC.currentTime;
+  while (nextNote < AC.currentTime + .25) { musicStep(step, nextNote - AC.currentTime); nextNote += SPB; step++; }
+}
+/* seluruh audio video dirender offline (untuk ekspor) */
+async function renderAudioOffline(sr) {
+  const oac = new OfflineAudioContext(2, Math.ceil((TOTAL + .5) * sr), sr);
+  const out = oac.createGain(); out.gain.value = .8; out.connect(oac.destination);
+  X = { ac: oac, out, nb: makeNoise(oac), at: 0 };
+  if (musicOn.checked) {
+    for (const [et, k] of EVENTS) { X.at = et; (SFX[k] || SFX.pop)(); }
+    for (let st = 0; st * SPB < TOTAL - .3; st++) { X.at = .3 + st * SPB; musicStep(st, 0); }
+    // musik memudar di akhir
+    out.gain.setValueAtTime(.8, Math.max(0, TOTAL - 2.5)); out.gain.linearRampToValueAtTime(0, TOTAL);
+  }
+  return oac.startRendering();
+}
+
+/* narasi TTS (hanya untuk pemutaran langsung) */
+let voice = null;
+function pickVoice() { const vs = speechSynthesis.getVoices(); voice = vs.find(v => /^id/i.test(v.lang) && /google|online|natural/i.test(v.name)) || vs.find(v => /^id/i.test(v.lang)) || null; }
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text) {
+  if (!('speechSynthesis' in window) || !ttsOn.checked) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/\//g, ' garis miring ').replace(/BB-2026-0001/, 'B B 2026 0 0 0 1'));
+  u.lang = 'id-ID'; if (voice) u.voice = voice; u.rate = 1.02; speechSynthesis.speak(u);
+}
+
+/* =========================================================
+   PEMUTAR
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const playBtn = $('play'), big = $('big'), seek = $('seek'), timeEl = $('time'), ttsOn = $('tts'), musicOn = $('music');
+let t = 0, started = false, playing = false, last = 0, lastKey = null, recorder = null, chunks = [];
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+function setPlaying(p) {
+  playing = p; playBtn.textContent = p ? '❚❚ Jeda' : '▶ Putar'; big.hidden = p;
+  if (p) { started = true; initAudio(); AC.resume(); last = performance.now(); lastKey = null; if (t >= TOTAL - .05) t = 0; }
+  else if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+function jump(nt) { started = true; t = clamp(nt, 0, TOTAL); lastKey = null; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+function frame(now) {
+  if (playing) {
+    const dt = Math.min(.1, (now - last) / 1000); last = now;
+    const prev = t; t += dt;
+    for (const [et, k] of EVENTS) { if (et > prev && et <= t) playSfx(k); if (et > t) break; }
+    if (t >= TOTAL) { t = TOTAL; setPlaying(false); if (recorder) recorder.stop(); }
+  }
+  musicTick();
+  const key = render(started ? Math.min(t, TOTAL - .001) : POSTER);
+  if (playing && key && key !== lastKey) { const [si, li] = key.split(':').map(Number); say(SC[si].lines[li]); }
+  lastKey = key;
+  timeEl.textContent = `${fmt(t)} / ${fmt(TOTAL)}`;
+  if (!seek.matches(':active')) seek.value = Math.round(t / TOTAL * 1000);
+  const si = sceneAt(t);
+  document.querySelectorAll('.chap button').forEach((b, i) => b.classList.toggle('on', i === si));
+  requestAnimationFrame(frame);
+}
+
+playBtn.onclick = () => { if (!recorder) setPlaying(!playing); };
+big.onclick = () => setPlaying(true);
+cv.onclick = () => { if (!recorder) setPlaying(!playing); };
+seek.oninput = () => { if (!recorder) jump(seek.value / 1000 * TOTAL); };
+$('fs').onclick = () => { const st = document.querySelector('.stage'); (st.requestFullscreen || st.webkitRequestFullscreen).call(st); };
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+  if (e.code === 'Space') { e.preventDefault(); if (!recorder) setPlaying(!playing); }
+  if (e.code === 'ArrowRight' && !recorder) jump(t + 5);
+  if (e.code === 'ArrowLeft' && !recorder) jump(t - 5);
+});
+
+const chap = $('chap');
+SC.forEach((s, i) => { const b = document.createElement('button'); b.textContent = `${i + 1}. ${s.chapter}`; b.onclick = () => { if (!recorder) jump(s.start + .01); }; chap.appendChild(b); });
+const scriptEl = $('script');
+SC.forEach((s, i) => {
+  const h = document.createElement('h3'); h.textContent = `${i + 1}. ${s.chapter} (${fmt(s.start)})`; scriptEl.appendChild(h);
+  s.lines.forEach(l => { const p = document.createElement('p'); p.textContent = l; scriptEl.appendChild(p); });
+});
+
+/* ---------- ekspor ke file video ----------
+   Cara utama: render tiap frame + encode dengan WebCodecs ke MP4 (lebih cepat dari
+   real-time dan tetap jalan walau tab tidak terlihat). Cadangan: MediaRecorder real-time. */
+async function finishVideo(blob, ext) {
+  const name = `alur-siber-evidence.${ext}`, a = $('dl');
+  a.href = URL.createObjectURL(blob); a.download = name; a.textContent = `⬇ Unduh ${name} (${(blob.size / 1048576).toFixed(1)} MB)`; a.hidden = false;
+  $('recst').textContent = 'Video selesai dibuat.'; $('rec').disabled = false; recorder = null;
+  if (/[?&]upload/.test(location.search)) {
+    try { const r = await fetch('/upload?name=' + name, { method: 'POST', body: blob }); $('recst').textContent = r.ok ? 'Video selesai dibuat & tersimpan di folder proyek.' : 'Video selesai (gagal menyimpan otomatis).'; } catch (e) { }
+  }
+}
+const yieldNow = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = r; c.port2.postMessage(0); });
+
+async function exportWebCodecs() {
+  const FPS = 30, VW = cv.width, VH = cv.height, SR = 48000;
+  const vcfg = { codec: 'avc1.640028', width: VW, height: VH, bitrate: 5e6, framerate: FPS };
+  if (!(await VideoEncoder.isConfigSupported(vcfg)).supported) throw new Error('H.264 tidak didukung');
+  let acfg = { codec: 'mp4a.40.2', numberOfChannels: 2, sampleRate: SR, bitrate: 160000 }, acodec = 'aac';
+  if (!(await AudioEncoder.isConfigSupported(acfg)).supported) { acfg = { codec: 'opus', numberOfChannels: 2, sampleRate: SR, bitrate: 160000 }; acodec = 'opus'; }
+  const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
+  const muxer = new Muxer({ target: new ArrayBufferTarget(), fastStart: 'in-memory', video: { codec: 'avc', width: VW, height: VH, frameRate: FPS }, audio: { codec: acodec, numberOfChannels: 2, sampleRate: SR } });
+  let fail = null;
+  const ve = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => fail = e });
+  ve.configure(vcfg);
+  const N = Math.ceil(TOTAL * FPS);
+  started = true;
+  for (let i = 0; i < N; i++) {
+    if (fail) throw fail;
+    render(Math.min(i / FPS, TOTAL - .001));
+    // ambil piksel langsung (VideoFrame(canvas) bisa memakai frame lama saat tab tersembunyi)
+    const px = ctx.getImageData(0, 0, VW, VH).data;
+    const f = new VideoFrame(px, { format: 'RGBA', codedWidth: VW, codedHeight: VH, timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    ve.encode(f, { keyFrame: i % (FPS * 2) === 0 }); f.close();
+    while (ve.encodeQueueSize > 8) await yieldNow();
+    if (i % 15 === 0) { $('recst').textContent = `Membuat video… ${Math.round(i / N * 90)}% (frame ${i}/${N})`; await yieldNow(); }
+  }
+  await ve.flush(); ve.close();
+  $('recst').textContent = 'Membuat audio…'; await yieldNow();
+  const buf = await renderAudioOffline(SR);
+  const ae = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => fail = e });
+  ae.configure(acfg);
+  const L0 = buf.getChannelData(0), R0 = buf.getChannelData(1), CHUNK = 4800;
+  for (let off = 0; off < buf.length; off += CHUNK) {
+    const n = Math.min(CHUNK, buf.length - off), data = new Float32Array(n * 2);
+    data.set(L0.subarray(off, off + n), 0); data.set(R0.subarray(off, off + n), n);
+    const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(off * 1e6 / SR), data });
+    ae.encode(ad); ad.close();
+    if (ae.encodeQueueSize > 16) await yieldNow();
+  }
+  await ae.flush(); ae.close();
+  if (fail) throw fail;
+  muxer.finalize();
+  return new Blob([muxer.target.buffer], { type: 'video/mp4' });
+}
+
+function exportRealtime() {
+  initAudio(); AC.resume();
+  const stream = cv.captureStream(30);
+  recDest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+  const types = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'];
+  const mime = types.find(m => MediaRecorder.isTypeSupported(m)) || '';
+  const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+  chunks = [];
+  recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 10e6 });
+  recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+  recorder.onstop = () => finishVideo(new Blob(chunks, { type: mime || 'video/webm' }), ext);
+  $('recst').textContent = `Merekam (${ext.toUpperCase()})… biarkan tab ini tetap terlihat sampai selesai (±${fmt(TOTAL)}).`;
+  jump(0); recorder.start(1000); setPlaying(true);
+}
+
+$('rec').onclick = async () => {
+  setPlaying(false); $('rec').disabled = true; $('dl').hidden = true;
+  if (window.VideoEncoder && window.AudioEncoder) {
+    recorder = { stop() { } }; // kunci kontrol pemutar selama ekspor
+    try { const blob = await exportWebCodecs(); t = 0; await finishVideo(blob, 'mp4'); return; }
+    catch (e) { console.warn('Ekspor WebCodecs gagal, pakai perekaman real-time:', e); recorder = null; }
+  }
+  if (!window.MediaRecorder || !cv.captureStream) { $('recst').textContent = 'Peramban ini belum mendukung pembuatan video. Coba Chrome atau Edge terbaru.'; $('rec').disabled = false; return; }
+  exportRealtime();
+};
+
+/* poster awal: tunggu font, lalu tampilkan frame judul */
+(async () => {
+  try { await Promise.all([document.fonts.load(`800 40px "Baloo 2"`), document.fonts.load(`800 20px Nunito`), document.fonts.load(`700 20px Nunito`)]); } catch (e) { }
+  requestAnimationFrame(n => { last = n; frame(n); });
+})();
+</script>
+</body>
+</html>

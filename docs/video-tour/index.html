@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Video Tour SIBER EVIDENCE</title>
+<style>
+:root{--bg:#F3F5F9;--panel:#fff;--ink:#0F1B33;--muted:#5B6478;--line:#DDE2EB}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#10141D;--panel:#1A202C;--ink:#EEF1F6;--muted:#9AA3B5;--line:#2C3442}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+h1{margin:0 0 4px;font-size:clamp(22px,3.5vw,32px)}
+.sub{margin:0 0 16px;color:var(--muted)}
+.stage{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:16/9;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+canvas{display:block;width:100%;height:100%}
+.bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+button{font:inherit;font-weight:700;border:0;border-radius:999px;padding:9px 16px;cursor:pointer;background:#2563EB;color:#fff}
+button.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:not-allowed}
+input[type=range]{flex:1;min-width:160px;accent-color:#2563EB}
+.time{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700;min-width:100px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:16px}
+.st{color:var(--muted);font-weight:600}
+a{color:#2563EB;font-weight:700}
+label{color:var(--muted);font-weight:600;display:flex;gap:6px;align-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Video Tour SIBER EVIDENCE</h1>
+  <p class="sub">Demonstrasi aplikasi dengan narasi Bahasa Indonesia dan zoom ke bagian yang dibahas.</p>
+  <div class="stage"><canvas id="cv" width="1920" height="1080"></canvas></div>
+  <div class="bar">
+    <button id="play" disabled>▶ Putar</button>
+    <span class="time" id="time">memuat…</span>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Posisi video">
+    <label><input type="checkbox" id="music" checked> Musik latar</label>
+  </div>
+  <div class="card">
+    <button id="exp" disabled>⬇ Buat file video (MP4)</button>
+    <span class="st" id="st">Memuat tangkapan layar dan suara…</span>
+    <a id="dl" hidden></a>
+  </div>
+</div>
+<script type="module">
+import { STEPS } from './tour.mjs';
+const $ = (id) => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const OW = 1920, OH = 1080;
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const ease = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const pr = (t, s, d) => clamp((t - s) / d);
+const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+
+/* ---------- muat aset ---------- */
+const manifest = await (await fetch('assets/manifest.json', { cache: 'no-store' })).json();
+const IW = manifest.width, IH = manifest.height;
+const files = new Set();
+manifest.steps.forEach((s) => { files.add(s.shot); s.cursor.forEach((c) => c.pre && files.add(c.pre)); });
+const IMG = {};
+await Promise.all([...files].map(async (f) => { IMG[f] = await createImageBitmap(await (await fetch('assets/shots/' + f)).blob()); }));
+const AC = new AudioContext();
+const VOICE = await Promise.all(STEPS.map(async (_, i) => AC.decodeAudioData(await (await fetch(`assets/audio/${String(i).padStart(2, '0')}.mp3`)).arrayBuffer())));
+
+/* ---------- linimasa ---------- */
+const CLICK = 1.05, LEAD = .3, TAIL = .45;
+let TOTAL = 0;
+const TL = STEPS.map((s, i) => {
+  const m = manifest.steps.find((x) => x.i === i) || { shot: null, zoom: null, cursor: [] };
+  const clicks = m.cursor.filter((c) => c.type === 'click'), hovers = m.cursor.filter((c) => c.type === 'hover');
+  const intro = s.title ? 2.2 : 0;
+  const busy = clicks.length * CLICK;
+  const voiceAt = intro + Math.max(LEAD, busy * .55);
+  const dur = Math.max(voiceAt + VOICE[i].duration + TAIL, busy + 1.6) + (s.outro ? 3 : 0);
+  const e = { i, s, m, clicks, hovers, start: TOTAL, dur, intro, voiceAt, busy };
+  TOTAL += dur; return e;
+});
+const at = (t) => { for (let k = TL.length - 1; k >= 0; k--) if (t >= TL[k].start) return k; return 0; };
+
+/* kamera: { cx, cy, s } dalam piksel gambar; s=1 berarti seluruh layar */
+const FULL = { cx: IW / 2, cy: IH / 2, s: 1 };
+function camFor(r) {
+  if (!r) return FULL;
+  const s = clamp(Math.min(.78 * IW / r.w, .66 * IH / r.h), 1, 2.4);
+  const vw = IW / s, vh = IH / s;
+  return { cx: clamp(r.x + r.w / 2, vw / 2, IW - vw / 2), cy: clamp(r.y + r.h / 2 + vh * .04, vh / 2, IH - vh / 2), s };
+}
+const mixCam = (a, b, k) => ({ cx: lerp(a.cx, b.cx, k), cy: lerp(a.cy, b.cy, k), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), k)) });
+const center = (r) => ({ x: r.x + r.w / 2, y: r.y + r.h * .62 });
+
+/* status akhir tiap langkah (gambar, kamera, kursor) untuk transisi */
+const END = [];
+let lastCur = { x: IW * .5, y: IH * .7 };
+TL.forEach((e) => {
+  e.prevEnd = END[e.i - 1] || { img: e.m.shot, cam: FULL, cur: lastCur };
+  e.cam = camFor(e.m.zoom);
+  let cur = e.prevEnd.cur;
+  e.clicks.forEach((c) => { cur = center(c.rect); });
+  e.hovers.forEach((c) => { cur = center(c.rect); });
+  END[e.i] = { img: e.m.shot, cam: e.cam, cur };
+});
+
+/* ---------- gambar satu frame ---------- */
+function drawShot(img, cam, a = 1) {
+  if (!img || a <= 0) return;
+  const vw = IW / cam.s, vh = IH / cam.s;
+  ctx.globalAlpha = a;
+  ctx.drawImage(IMG[img], cam.cx - vw / 2, cam.cy - vh / 2, vw, vh, 0, 0, OW, OH);
+  ctx.globalAlpha = 1;
+}
+const toOut = (p, cam) => { const vw = IW / cam.s, vh = IH / cam.s; return { x: (p.x - (cam.cx - vw / 2)) * OW / vw, y: (p.y - (cam.cy - vh / 2)) * OH / vh, k: OW / vw }; };
+function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function cursor(p, press = 0) {
+  ctx.save(); ctx.translate(p.x, p.y); ctx.scale(1.25 - press * .15, 1.25 - press * .15);
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 26); ctx.lineTo(7, 20); ctx.lineTo(12, 31); ctx.lineTo(17, 29); ctx.lineTo(12, 18); ctx.lineTo(21, 18); ctx.closePath();
+  ctx.fillStyle = '#111'; ctx.fill(); ctx.shadowColor = 'transparent'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.restore();
+}
+function ripple(p, k) {
+  if (k <= 0 || k >= 1) return;
+  ctx.beginPath(); ctx.arc(p.x, p.y, 14 + k * 38, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(37,99,235,${.7 * (1 - k)})`; ctx.lineWidth = 5; ctx.stroke();
+  ctx.fillStyle = `rgba(37,99,235,${.18 * (1 - k)})`; ctx.fill();
+}
+function wrap(str, maxW) {
+  const words = str.split(' '), out = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; }
+  if (cur) out.push(cur); return out;
+}
+
+function render(t) {
+  const e = TL[at(t)], lt = t - e.start, P = e.prevEnd;
+  ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, OW, OH);
+  let cam, curPos = P.cur, press = 0, rip = null;
+
+  /* fase klik: tampilkan gambar sebelum klik, kursor bergerak, klik, lalu pindah gambar */
+  if (lt < e.busy) {
+    const k = Math.floor(lt / CLICK), c = e.clicks[k], ph = lt - k * CLICK;
+    const camC = mixCam(k === 0 ? P.cam : FULL, FULL, ease(pr(ph, 0, .45)));
+    cam = camC;
+    const from = k === 0 ? P.cur : center(e.clicks[k - 1].rect), to = center(c.rect);
+    const mv = ease(pr(ph, .1, .45));
+    curPos = { x: lerp(from.x, to.x, mv), y: lerp(from.y, to.y, mv) };
+    press = Math.sin(Math.PI * pr(ph, .58, .16));
+    const nextImg = k + 1 < e.clicks.length ? e.clicks[k + 1].pre : e.m.shot;
+    const prevImg = k === 0 && ph < .25 && P.img !== c.pre ? P.img : null;
+    drawShot(c.pre, cam);
+    if (prevImg) drawShot(prevImg, cam, 1 - pr(ph, 0, .25));
+    drawShot(nextImg, cam, ease(pr(ph, .72, .3)));
+    rip = { p: toOut(to, cam), k: pr(ph, .6, .45) };
+  } else {
+    const st = e.busy, startCam = e.busy ? FULL : P.cam;
+    const k = ease(pr(lt, st + .05, .9));
+    cam = mixCam(startCam, e.cam, k);
+    drawShot(e.m.shot, cam);
+    if (!e.busy && P.img && P.img !== e.m.shot) drawShot(P.img, cam, 1 - pr(lt, 0, .4));
+    if (e.busy) { const last = e.clicks[e.clicks.length - 1]; curPos = center(last.rect); rip = { p: toOut(curPos, cam), k: pr(lt, e.busy - CLICK + .6, .45) }; }
+    // sorotan target zoom
+    if (e.m.zoom) {
+      const hk = pr(lt, st + .8, .4) * (1 - pr(lt, e.dur - .35, .3));
+      if (hk > 0) {
+        const r = e.m.zoom, a = toOut({ x: r.x, y: r.y }, cam), pad = 10;
+        const w = r.w * a.k + pad * 2, h = r.h * a.k + pad * 2;
+        ctx.save();
+        ctx.fillStyle = `rgba(8,14,30,${.28 * hk})`;
+        ctx.beginPath(); ctx.rect(0, 0, OW, OH); ctx.roundRect(a.x - pad, a.y - pad, w, h, 14); ctx.fill('evenodd');
+        rrect(a.x - pad, a.y - pad, w, h, 14); ctx.strokeStyle = `rgba(37,99,235,${hk})`; ctx.lineWidth = 4; ctx.stroke();
+        ctx.restore();
+      }
+    }
+    // kursor menuju target hover
+    if (e.hovers.length) {
+      const from = e.busy ? center(e.clicks[e.clicks.length - 1].rect) : P.cur, to = center(e.hovers[e.hovers.length - 1].rect);
+      const mv = ease(pr(lt, st + .3, .7));
+      curPos = { x: lerp(from.x, to.x, mv), y: lerp(from.y, to.y, mv) };
+    }
+  }
+  const showCur = e.clicks.length || e.hovers.length || (e.i > 1 && !e.s.title);
+  const cp = toOut(curPos, cam);
+  if (rip) ripple(rip.p, rip.k);
+  if (showCur && !e.s.outro) cursor(cp, press);
+
+  /* label bab */
+  ctx.font = `700 26px ${FONT}`;
+  const lw = ctx.measureText(e.s.chapter).width + 40;
+  ctx.globalAlpha = pr(lt, 0, .4) * (e.s.title && lt < e.intro ? 0 : 1);
+  rrect(32, 30, lw, 48, 24); ctx.fillStyle = 'rgba(15,27,51,.86)'; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText(e.s.chapter, 52, 55);
+  ctx.globalAlpha = 1;
+
+  /* kartu judul & penutup */
+  if (e.s.title || e.s.outro) {
+    const k = e.s.title ? 1 - pr(lt, e.intro - .6, .6) : pr(lt, e.dur - 3.4, .8);
+    if (k > 0) {
+      ctx.globalAlpha = k;
+      const g = ctx.createLinearGradient(0, 0, OW, OH); g.addColorStop(0, '#0F1B33'); g.addColorStop(1, '#1E3A8A');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, OW, OH);
+      ctx.translate(OW / 2, OH / 2 - 40);
+      ctx.fillStyle = '#2563EB'; rrect(-60, -170, 120, 120, 28); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 7; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(0, -140); ctx.quadraticCurveTo(18, -130, 32, -130); ctx.lineTo(32, -108); ctx.quadraticCurveTo(30, -82, 0, -68); ctx.quadraticCurveTo(-30, -82, -32, -108); ctx.lineTo(-32, -130); ctx.quadraticCurveTo(-18, -130, 0, -140); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = `800 84px ${FONT}`; ctx.fillText('SIBER EVIDENCE', 0, 20);
+      ctx.font = `600 34px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.78)';
+      ctx.fillText(e.s.title ? 'Tur Aplikasi Pengelolaan Barang Bukti' : 'Terima kasih sudah menonton', 0, 92);
+      ctx.font = `500 24px ${FONT}`; ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.fillText('Subbid Siber Ditreskrimsus Polda Sulawesi Utara', 0, 142);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+    }
+  }
+
+  /* subtitle */
+  const vs = e.voiceAt, ve = vs + VOICE[e.i].duration;
+  if (lt >= vs - .1 && lt <= ve + .3) {
+    ctx.font = `600 34px ${FONT}`;
+    const lines = wrap(e.s.say, 1500), lh = 46, h = lines.length * lh + 30;
+    const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 64;
+    ctx.globalAlpha = pr(lt, vs - .1, .2) * (1 - pr(lt, ve + .1, .2));
+    rrect(OW / 2 - w / 2, OH - 44 - h, w, h, 18); ctx.fillStyle = 'rgba(10,15,28,.82)'; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    lines.forEach((l, i) => ctx.fillText(l, OW / 2, OH - 44 - h + 15 + lh / 2 + i * lh));
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ---------- audio ---------- */
+const CH = [[60, 64, 67, 72], [57, 60, 64, 69], [53, 57, 60, 65], [55, 59, 62, 67]];
+const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const SPB = 60 / 84 / 2;
+function scheduleAll(ac, out, offset, musicOn) {
+  const nodes = [], now = ac.currentTime;
+  TL.forEach((e) => {
+    const when = e.start + e.voiceAt - offset;
+    if (when + VOICE[e.i].duration < 0) return;
+    const src = ac.createBufferSource(); src.buffer = VOICE[e.i];
+    const g = ac.createGain(); g.gain.value = 1; src.connect(g); g.connect(out);
+    if (when >= 0) src.start(now + when); else src.start(now, -when);
+    nodes.push(src);
+  });
+  if (musicOn) {
+    const mg = ac.createGain(); mg.gain.value = .5; mg.connect(out);
+    mg.gain.setValueAtTime(.5, now + Math.max(0, TOTAL - 3 - offset)); mg.gain.linearRampToValueAtTime(0, now + Math.max(.01, TOTAL - offset));
+    for (let st = Math.ceil(offset / SPB); st * SPB < TOTAL; st++) {
+      const t0 = now + st * SPB - offset; const ch = CH[Math.floor(st / 8) % 4];
+      const note = (f, dur, vol, type) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur); o.connect(g); g.connect(mg); o.start(t0); o.stop(t0 + dur + .05); nodes.push(o); };
+      note(mtof(ch[[0, 1, 2, 3, 2, 1, 2, 3][st % 8]] + 12), .5, .03, 'sine');
+      if (st % 8 === 0) { ch.slice(0, 3).forEach((m) => note(mtof(m), SPB * 8, .022, 'triangle')); note(mtof(ch[0] - 12), SPB * 6, .05, 'sine'); }
+    }
+  }
+  return nodes;
+}
+
+/* ---------- pemutar ---------- */
+let t = 0, playing = false, last = 0, live = [];
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function stopAudio() { live.forEach((n) => { try { n.stop(); } catch { } }); live = []; }
+function setPlay(p) {
+  playing = p; $('play').textContent = p ? '❚❚ Jeda' : '▶ Putar';
+  stopAudio();
+  if (p) { if (t >= TOTAL - .05) t = 0; AC.resume(); live = scheduleAll(AC, AC.destination, t, $('music').checked); last = performance.now(); }
+}
+function loop(now) {
+  if (playing) { t += (now - last) / 1000; last = now; if (t >= TOTAL) { t = TOTAL; setPlay(false); } }
+  render(Math.min(t, TOTAL - .001));
+  $('time').textContent = `${fmt(t)} / ${fmt(TOTAL)}`;
+  if (!$('seek').matches(':active')) $('seek').value = Math.round(t / TOTAL * 1000);
+  requestAnimationFrame(loop);
+}
+$('play').onclick = () => setPlay(!playing);
+cv.onclick = () => setPlay(!playing);
+$('seek').oninput = () => { t = $('seek').value / 1000 * TOTAL; if (playing) setPlay(true); };
+$('play').disabled = false; $('exp').disabled = false;
+$('st').textContent = `Siap. Durasi ${fmt(TOTAL)}, ${STEPS.length} adegan.`;
+requestAnimationFrame((n) => { last = n; loop(n); });
+window.__tour = { TL, render, get TOTAL() { return TOTAL; }, seek: (x) => { t = x; } };
+
+/* ---------- ekspor MP4 (WebCodecs) ---------- */
+const yieldNow = () => new Promise((r) => { const c = new MessageChannel(); c.port1.onmessage = r; c.port2.postMessage(0); });
+$('exp').onclick = async () => {
+  setPlay(false); $('exp').disabled = true; $('dl').hidden = true;
+  try {
+    const FPS = 30, SR = 48000;
+    const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
+    const muxer = new Muxer({ target: new ArrayBufferTarget(), fastStart: 'in-memory', video: { codec: 'avc', width: OW, height: OH, frameRate: FPS }, audio: { codec: 'aac', numberOfChannels: 2, sampleRate: SR } });
+    let fail = null;
+    const ve = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => { fail = e; } });
+    ve.configure({ codec: 'avc1.640028', width: OW, height: OH, bitrate: 6e6, framerate: FPS });
+    const N = Math.ceil(TOTAL * FPS);
+    for (let i = 0; i < N; i++) {
+      if (fail) throw fail;
+      render(Math.min(i / FPS, TOTAL - .001));
+      const px = ctx.getImageData(0, 0, OW, OH).data;
+      const f = new VideoFrame(px, { format: 'RGBA', codedWidth: OW, codedHeight: OH, timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+      ve.encode(f, { keyFrame: i % (FPS * 2) === 0 }); f.close();
+      while (ve.encodeQueueSize > 6) await yieldNow();
+      if (i % 15 === 0) { $('st').textContent = `Membuat video… ${Math.round(i / N * 95)}%`; await yieldNow(); }
+    }
+    await ve.flush(); ve.close();
+    $('st').textContent = 'Membuat audio…'; await yieldNow();
+    const oac = new OfflineAudioContext(2, Math.ceil((TOTAL + .3) * SR), SR);
+    scheduleAll(oac, oac.destination, 0, $('music').checked);
+    const buf = await oac.startRendering();
+    const ae = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => { fail = e; } });
+    ae.configure({ codec: 'mp4a.40.2', numberOfChannels: 2, sampleRate: SR, bitrate: 160000 });
+    const L = buf.getChannelData(0), R = buf.getChannelData(1), CH_ = 4800;
+    for (let off = 0; off < buf.length; off += CH_) {
+      const n = Math.min(CH_, buf.length - off), data = new Float32Array(n * 2);
+      data.set(L.subarray(off, off + n), 0); data.set(R.subarray(off, off + n), n);
+      const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(off * 1e6 / SR), data });
+      ae.encode(ad); ad.close();
+      if (ae.encodeQueueSize > 16) await yieldNow();
+    }
+    await ae.flush(); ae.close();
+    if (fail) throw fail;
+    muxer.finalize();
+    const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' }), name = 'video-tour-siber-evidence.mp4';
+    const a = $('dl'); a.href = URL.createObjectURL(blob); a.download = name; a.textContent = ` ⬇ Unduh ${name} (${(blob.size / 1048576).toFixed(1)} MB)`; a.hidden = false;
+    $('st').textContent = 'Selesai.';
+    try { const r = await fetch('/upload?name=' + name, { method: 'POST', body: blob }); if (r.ok) $('st').textContent = 'Selesai & tersimpan di folder docs/video-tour.'; } catch { }
+  } catch (err) { console.error(err); $('st').textContent = 'Gagal membuat video: ' + err.message; }
+  $('exp').disabled = false;
+};
+</script>
+</body>
+</html>

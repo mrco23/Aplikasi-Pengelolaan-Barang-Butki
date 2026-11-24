@@ -18,12 +18,13 @@ export default function MovementModal({ open, onClose, fixedBarangId, defaultJen
     const b = fixedBarangId ? lookup.barang[fixedBarangId] : undefined;
     return {
       barang_bukti_id: b ? String(b.id) : '', jenis: defaultJenis, lokasi_asal_id: b ? String(b.lokasi_id) : '',
-      lokasi_tujuan_id: '', petugas_id: user ? String(user.id) : '', tanggal_waktu: nowLocal(),
+      lokasi_tujuan_id: '', petugas_id: user?.role === 'petugas' ? String(user.id) : '', tanggal_waktu: nowLocal(),
       alasan: '', catatan: '', tanggal_harapan_kembali: '',
     };
   };
   const [f, setF] = useState(init);
   const [errs, setErrs] = useState({});
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) { setF(init()); setErrs({}); }
@@ -44,7 +45,7 @@ export default function MovementModal({ open, onClose, fixedBarangId, defaultJen
     if (f.jenis === 'pengembalian' && openLoan && !f.lokasi_tujuan_id) set('lokasi_tujuan_id', String(openLoan.lokasi_asal_id ?? ''));
   }, [f.jenis, openLoan]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function submit() {
+  async function submit() {
     const e = {};
     if (!f.barang_bukti_id) e.barang_bukti_id = 'Pilih barang bukti.';
     if (!f.lokasi_asal_id) e.lokasi_asal_id = 'Lokasi asal wajib dipilih.';
@@ -62,18 +63,24 @@ export default function MovementModal({ open, onClose, fixedBarangId, defaultJen
     setErrs(e);
     if (Object.keys(e).length) { toast('error', 'Data belum lengkap', 'Periksa kembali isian yang ditandai merah.'); return; }
 
-    addRiwayat({
+    setBusy(true);
+    /* Lokasi asal & status kembali ditentukan server dari kondisi barang saat ini */
+    const r = await addRiwayat({
       barang_bukti_id: barangId,
       jenis: f.jenis,
       tanggal_waktu: f.tanggal_waktu,
-      lokasi_asal_id: Number(f.lokasi_asal_id),
       lokasi_tujuan_id: Number(f.lokasi_tujuan_id),
       petugas_id: Number(f.petugas_id),
       alasan: f.alasan.trim(),
       catatan: f.catatan.trim(),
       tanggal_harapan_kembali: f.jenis === 'peminjaman' ? f.tanggal_harapan_kembali : null,
-      status_kembali: f.jenis === 'peminjaman' ? 'belum_kembali' : null,
     });
+    setBusy(false);
+    if (!r.ok) {
+      if (r.field) setErrs({ [r.field]: r.msg });
+      toast('error', 'Gagal mencatat kejadian', r.msg);
+      return;
+    }
     toast('success', 'Kejadian tercatat', `${JENIS_RIWAYAT[f.jenis]} untuk ${barang.kode} berhasil dicatat pada riwayat.`);
     onClose();
   }
@@ -88,7 +95,7 @@ export default function MovementModal({ open, onClose, fixedBarangId, defaultJen
       desc="Rekam perpindahan, peminjaman, pengembalian, pemeriksaan, atau pengalihan. Riwayat sebelumnya tidak pernah ditimpa — setiap kejadian ditambahkan sebagai catatan baru."
       footer={<>
         <Button variant="secondary" onClick={onClose}>Batal</Button>
-        <Button icon={Check} onClick={submit}>Catat Kejadian</Button>
+        <Button icon={Check} disabled={busy} onClick={submit}>Catat Kejadian</Button>
       </>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Barang Bukti" required error={errs.barang_bukti_id} className="sm:col-span-2">

@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useBase } from '../../utils/routes';
 import { JENIS_META, JENIS_RIWAYAT } from '../../constants';
 import { cn, fmtDate, fmtDateTime, todayISO } from '../../utils/format';
 import { lokasiNama, penggunaNama } from '../../utils/selectors';
@@ -29,6 +30,7 @@ export function LoanInfo({ r, prefix = 'Harap kembali' }) {
 }
 
 export default function Timeline({ items, showKode = true }) {
+  const base = useBase();
   const { lookup } = useApp();
   if (!items.length) return <p className="py-8 text-center text-xs text-slate-400">Belum ada kejadian tercatat.</p>;
   return (
@@ -48,7 +50,7 @@ export default function Timeline({ items, showKode = true }) {
             <div className={cn('min-w-0 flex-1 pb-5', last && 'pb-1')}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <JenisBadge jenis={r.jenis} />
-                {showKode && b && <Link to={`/petugas/barang-bukti/${b.id}`} className="text-xs font-bold text-navy-800 hover:text-blue-700">{b.kode}</Link>}
+                {showKode && b && <Link to={`${base}/barang-bukti/${b.id}`} className="text-xs font-bold text-navy-800 hover:text-blue-700">{b.kode}</Link>}
                 <span className="text-[11px] tabular-nums text-slate-400">{fmtDateTime(r.tanggal_waktu)}</span>
               </div>
               <p className="mt-1.5 flex flex-wrap items-center gap-1 text-xs text-slate-600">

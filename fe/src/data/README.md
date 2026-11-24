@@ -1,11 +1,11 @@
 # Data Dummy — Acuan ERD
 
 Folder ini berisi data contoh **fiktif** untuk aplikasi SIBER EVIDENCE. Setiap file JSON mewakili **satu tabel**
-MySQL, memakai nama kolom `snake_case` dan `id` integer (seperti auto-increment), sehingga bisa langsung dipakai
-sebagai acuan ERD, migration, dan seeder Laravel.
+PostgreSQL (Supabase), memakai nama kolom `snake_case` dan `id` integer, sehingga bisa langsung dipakai
+sebagai acuan ERD dan data seed.
 
-Frontend memuat file-file ini sebagai data awal (seed). Perubahan dari aplikasi disimpan di `localStorage`
-peramban. Menu **Pengaturan → Muat Ulang Data Contoh** mengembalikan data ke isi file ini.
+File-file ini adalah sumber data contoh untuk basis data Supabase: `npm run seed` di folder `supabase/` membacanya
+langsung (membuat akun Supabase Auth, lalu mengisi tabel). Skema yang berlaku ada di `supabase/01_schema.sql`.
 
 | File | Tabel | Isi |
 | --- | --- | --- |

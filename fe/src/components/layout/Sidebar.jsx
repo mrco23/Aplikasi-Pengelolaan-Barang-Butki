@@ -1,21 +1,33 @@
 import { NavLink } from 'react-router-dom';
 import {
-  Shield, X, LayoutDashboard, FolderOpen, Archive, History, ClipboardList, Settings,
+  Shield, X, LayoutDashboard, FolderOpen, Archive, History, ClipboardList, Settings, Users, Database,
   LogOut, ChevronsLeft, ChevronsRight,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ROLE } from '../../constants';
 import { cn, namaPengguna } from '../../utils/format';
+import { baseFor } from '../../utils/routes';
 import { Avatar } from '../ui';
 
-export const PETUGAS_NAV = [
-  { to: '/petugas/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/petugas/perkara', label: 'Data Perkara', icon: FolderOpen },
-  { to: '/petugas/barang-bukti', label: 'Data Barang Bukti', icon: Archive },
-  { to: '/petugas/riwayat', label: 'Riwayat Perpindahan', icon: History },
-  { to: '/petugas/laporan', label: 'Laporan', icon: ClipboardList },
-  { to: '/petugas/pengaturan', label: 'Pengaturan', icon: Settings },
-];
+/* Menu sesuai peran. Administrator mendapat Manajemen Pengguna & Master Data. */
+export function navFor(user) {
+  const base = baseFor(user);
+  const nav = [
+    { to: `${base}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
+    { to: `${base}/perkara`, label: 'Data Perkara', icon: FolderOpen },
+    { to: `${base}/barang-bukti`, label: 'Data Barang Bukti', icon: Archive },
+    { to: `${base}/riwayat`, label: 'Riwayat Perpindahan', icon: History },
+    { to: `${base}/laporan`, label: 'Laporan', icon: ClipboardList },
+  ];
+  if (user?.role === 'administrator') {
+    nav.push(
+      { to: `${base}/pengguna`, label: 'Manajemen Pengguna', icon: Users },
+      { to: `${base}/master-data`, label: 'Master Data', icon: Database },
+    );
+  }
+  nav.push({ to: `${base}/pengaturan`, label: 'Pengaturan', icon: Settings });
+  return nav;
+}
 
 export default function Sidebar({ collapsed, onToggleCollapse, onNavigate, onLogout, mobile }) {
   const { user } = useApp();
@@ -39,7 +51,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, onNavigate, onLog
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {PETUGAS_NAV.map((n) => (
+        {navFor(user).map((n) => (
           <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} onClick={onNavigate}
             className={({ isActive }) => cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition',
               collapsed && 'justify-center px-0',

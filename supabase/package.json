@@ -1,0 +1,15 @@
+{
+  "name": "siber-evidence-supabase-tools",
+  "private": true,
+  "type": "module",
+  "description": "Alat bantu lokal untuk mengisi data contoh ke Supabase. Bukan bagian dari aplikasi yang di-deploy.",
+  "scripts": {
+    "db:apply": "node --env-file=.env apply.mjs",
+    "db:reset": "node --env-file=.env apply.mjs --reset",
+    "seed": "node --env-file=.env seed.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.47.10",
+    "pg": "8.13.1"
+  }
+}

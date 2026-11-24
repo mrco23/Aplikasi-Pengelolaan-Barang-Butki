@@ -7,7 +7,7 @@ import { Button, Field, IconInput } from '../../components/ui';
 import { homeFor } from '../../utils/routes';
 
 export default function LoginPage() {
-  const { login, toast } = useApp();
+  const { login, toast, bootError } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState('');
@@ -15,12 +15,15 @@ export default function LoginPage() {
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(true);
   const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     setErr('');
     if (!username.trim() || !password) { setErr('Nama pengguna dan kata sandi wajib diisi.'); return; }
-    const r = login(username, password, remember);
+    setBusy(true);
+    const r = await login(username.trim(), password, remember);
+    setBusy(false);
     if (!r.ok) { setErr(r.msg); return; }
     toast('success', 'Login berhasil', `Selamat datang, ${namaPengguna(r.user)}.`);
     const from = location.state?.from;
@@ -60,6 +63,12 @@ export default function LoginPage() {
               )} />
           </Field>
 
+          {bootError && !err && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-800" role="alert">
+              <TriangleAlert size={14} className="mt-0.5 shrink-0" />
+              {bootError}
+            </div>
+          )}
           {err && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-medium text-red-700" role="alert">
               <TriangleAlert size={14} className="mt-0.5 shrink-0" />
@@ -77,7 +86,7 @@ export default function LoginPage() {
               className="text-xs font-semibold text-blue-600 hover:underline">Lupa kata sandi?</button>
           </div>
 
-          <Button type="submit" icon={Shield} className="w-full">Masuk</Button>
+          <Button type="submit" icon={Shield} className="w-full" disabled={busy}>{busy ? 'Memeriksa…' : 'Masuk'}</Button>
         </form>
 
         {import.meta.env.DEV && (

@@ -3,13 +3,14 @@ import { Check } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { TAHAP, toOptions } from '../../constants';
 import { todayISO } from '../../utils/format';
-import { petugasOptions } from '../../utils/selectors';
+import { penggunaNama, petugasOptions } from '../../utils/selectors';
 import { Button, Field, Input, Modal, Select, Textarea } from '../ui';
 
 const blank = () => ({ nomor_lp: '', tanggal_laporan: todayISO(), uraian: '', tahap: 'lidik', penyidik_id: '' });
 
 export default function PerkaraFormModal({ open, initial, onClose, onSaved }) {
-  const { data, addPerkara, updatePerkara, toast } = useApp();
+  const { data, lookup, addPerkara, updatePerkara, toast } = useApp();
+  const [busy, setBusy] = useState(false);
   const [f, setF] = useState(blank);
   const [errs, setErrs] = useState({});
 
@@ -23,7 +24,7 @@ export default function PerkaraFormModal({ open, initial, onClose, onSaved }) {
 
   const set = (k, v) => setF((o) => ({ ...o, [k]: v }));
 
-  function submit() {
+  async function submit() {
     const e = {};
     const lp = f.nomor_lp.trim();
     if (!lp) e.nomor_lp = 'Nomor LP wajib diisi.';
@@ -36,18 +37,25 @@ export default function PerkaraFormModal({ open, initial, onClose, onSaved }) {
     setErrs(e);
     if (Object.keys(e).length) { toast('error', 'Formulir belum lengkap', 'Periksa kembali isian yang ditandai merah.'); return; }
 
-    const payload = { ...f, uraian: f.uraian.trim(), penyidik_id: Number(f.penyidik_id) };
-    let saved;
-    if (initial) {
-      updatePerkara(initial.id, payload);
-      saved = { ...initial, ...payload };
-      toast('success', 'Perkara diperbarui', `${lp} berhasil disimpan.`);
-    } else {
-      saved = addPerkara(payload);
-      toast('success', 'Perkara ditambahkan', `${lp} berhasil dicatat. Lanjutkan dengan mendaftarkan barang bukti.`);
+    const payload = { ...f, nomor_lp: lp, uraian: f.uraian.trim(), penyidik_id: Number(f.penyidik_id) };
+    setBusy(true);
+    const r = initial ? await updatePerkara(initial.id, payload) : await addPerkara(payload);
+    setBusy(false);
+    if (!r.ok) {
+      if (r.field) setErrs({ [r.field]: r.msg });
+      toast('error', 'Gagal menyimpan', r.msg);
+      return;
     }
+    toast('success', initial ? 'Perkara diperbarui' : 'Perkara ditambahkan',
+      initial ? `${lp} berhasil disimpan.` : `${lp} berhasil dicatat. Lanjutkan dengan mendaftarkan barang bukti.`);
     onClose();
-    onSaved?.(saved);
+    onSaved?.(r.data);
+  }
+
+  /* Penyidik lama yang kini nonaktif tetap ditampilkan agar data lama bisa diedit */
+  const penyidikOpts = petugasOptions(data);
+  if (initial && !penyidikOpts.some(([v]) => v === String(initial.penyidik_id))) {
+    penyidikOpts.push([String(initial.penyidik_id), `${penggunaNama(lookup, initial.penyidik_id)} (nonaktif)`]);
   }
 
   return (
@@ -56,7 +64,7 @@ export default function PerkaraFormModal({ open, initial, onClose, onSaved }) {
       desc={initial ? 'Perbarui informasi perkara.' : 'Catat perkara baru sebelum mendaftarkan barang bukti terkait.'}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Batal</Button>
-        <Button icon={Check} onClick={submit}>{initial ? 'Simpan Perubahan' : 'Simpan Perkara'}</Button>
+        <Button icon={Check} disabled={busy} onClick={submit}>{initial ? 'Simpan Perubahan' : 'Simpan Perkara'}</Button>
       </>}>
       <div className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -75,7 +83,7 @@ export default function PerkaraFormModal({ open, initial, onClose, onSaved }) {
             <Select value={f.tahap} onChange={(e) => set('tahap', e.target.value)} options={toOptions(TAHAP)} />
           </Field>
           <Field label="Penyidik" required error={errs.penyidik_id}>
-            <Select value={f.penyidik_id} error={errs.penyidik_id} placeholder="Pilih penyidik…" onChange={(e) => set('penyidik_id', e.target.value)} options={petugasOptions(data)} />
+            <Select value={f.penyidik_id} error={errs.penyidik_id} placeholder="Pilih penyidik…" onChange={(e) => set('penyidik_id', e.target.value)} options={penyidikOpts} />
           </Field>
         </div>
       </div>

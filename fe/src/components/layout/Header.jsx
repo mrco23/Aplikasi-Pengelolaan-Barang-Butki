@@ -2,12 +2,14 @@ import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, ChevronRight, ChevronDown, Bell, Settings, LogOut } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useBase } from '../../utils/routes';
 import { JENIS_META, JENIS_RIWAYAT, ROLE } from '../../constants';
 import { cn, fmtDateTime, namaPengguna } from '../../utils/format';
 import { penggunaNama, sortByTimeDesc } from '../../utils/selectors';
 import { Avatar, Badge } from '../ui';
 
 export default function Header({ title, crumbs, onMenu, onLogout }) {
+  const base = useBase();
   const { data, lookup, user, notifSeen, markNotifSeen } = useApp();
   const [openN, setOpenN] = useState(false);
   const [openP, setOpenP] = useState(false);
@@ -59,7 +61,7 @@ export default function Header({ title, crumbs, onMenu, onLogout }) {
                     const m = JENIS_META[r.jenis] || JENIS_META.perpindahan;
                     const isNew = !notifSeen || r.created_at > notifSeen;
                     return (
-                      <Link key={r.id} to="/petugas/riwayat" onClick={() => setOpenN(false)}
+                      <Link key={r.id} to={`${base}/riwayat`} onClick={() => setOpenN(false)}
                         className={cn('flex gap-3 border-b border-slate-50 px-4 py-3 transition last:border-0 hover:bg-slate-50', isNew && 'bg-blue-50/40')}>
                         <span className={cn('mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ring-1 ring-inset', m.dot)}>
                           <m.icon size={14} />
@@ -73,7 +75,7 @@ export default function Header({ title, crumbs, onMenu, onLogout }) {
                   })}
                   {rv.length === 0 && <p className="px-4 py-8 text-center text-xs text-slate-400">Belum ada aktivitas tercatat.</p>}
                 </div>
-                <Link to="/petugas/riwayat" onClick={() => setOpenN(false)} className="block border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 text-center text-[11px] font-semibold text-blue-600 hover:bg-slate-50">
+                <Link to={`${base}/riwayat`} onClick={() => setOpenN(false)} className="block border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 text-center text-[11px] font-semibold text-blue-600 hover:bg-slate-50">
                   Lihat semua riwayat perpindahan
                 </Link>
               </div>
@@ -106,7 +108,7 @@ export default function Header({ title, crumbs, onMenu, onLogout }) {
                   </div>
                 </div>
                 <div className="border-t border-slate-100 p-1.5">
-                  <Link to="/petugas/pengaturan" onClick={() => setOpenP(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-navy-800">
+                  <Link to={`${base}/pengaturan`} onClick={() => setOpenP(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-navy-800">
                     <Settings size={15} />Pengaturan
                   </Link>
                   <button onClick={() => { setOpenP(false); onLogout(); }}
